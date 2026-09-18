@@ -10,9 +10,11 @@ import { ErrorState } from '@/components/shared/error-state';
 import { LoadingSkeleton } from '@/components/shared/loading-skeleton';
 import { useDemoStatus } from '@/hooks/use-demo-status';
 import { useMembershipPlanRows } from '@/hooks/use-memberships-plans';
+import { useMessages } from '@/hooks/use-messages';
 import { useDemoRuntimeStore } from '@/stores/demo-runtime.store';
 
 export default function MembershipsPage() {
+  const m = useMessages();
   const status = useDemoStatus();
   const error = useDemoRuntimeStore((state) => state.error);
   const retryHydration = useDemoRuntimeStore((state) => state.retryHydration);
@@ -29,8 +31,8 @@ export default function MembershipsPage() {
   if (status === 'error') {
     return (
       <div className="flex flex-col gap-6">
-        <PageHeader title="Memberships" subtitle="Plans, pricing and member counts." />
-        <ErrorState description={error ?? "We couldn't load your membership plans."} onRetry={retryHydration} />
+        <PageHeader title={m.memberships.pageTitle} subtitle={m.memberships.pageSubtitle} />
+        <ErrorState description={error ?? m.memberships.errorDescription} onRetry={retryHydration} />
       </div>
     );
   }
@@ -38,7 +40,7 @@ export default function MembershipsPage() {
   if (status !== 'ready' || !rows) {
     return (
       <div className="flex flex-col gap-6">
-        <PageHeader title="Memberships" subtitle="Plans, pricing and member counts." />
+        <PageHeader title={m.memberships.pageTitle} subtitle={m.memberships.pageSubtitle} />
         <LoadingSkeleton variant="card" count={4} />
       </div>
     );
@@ -46,7 +48,7 @@ export default function MembershipsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Memberships" subtitle="Plans, pricing and member counts." />
+      <PageHeader title={m.memberships.pageTitle} subtitle={m.memberships.pageSubtitle} />
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
         {rows.map(({ plan, memberCount }) => (

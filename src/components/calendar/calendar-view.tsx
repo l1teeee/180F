@@ -12,6 +12,7 @@ import { SectionCard } from '@/components/shared/section-card';
 import { ErrorState } from '@/components/shared/error-state';
 import { useCalendarEvents } from '@/hooks/use-calendar-events';
 import { useDemoStatus } from '@/hooks/use-demo-status';
+import { useMessages } from '@/hooks/use-messages';
 import { useDemoRuntimeStore } from '@/stores/demo-runtime.store';
 import { CalendarToolbar, type CalendarViewName } from './calendar-toolbar';
 import { SessionDetailsSheet } from './session-details-sheet';
@@ -38,6 +39,7 @@ const ScheduleCalendar = dynamic(() => import('./schedule-calendar'), {
 });
 
 export function CalendarView() {
+  const m = useMessages();
   const status = useDemoStatus();
   const demoToday = useDemoRuntimeStore((state) => state.demoToday);
   const demoNow = useDemoRuntimeStore((state) => state.demoNow);
@@ -61,7 +63,7 @@ export function CalendarView() {
 
   if (status === 'error') {
     return (
-      <SectionCard title="Schedule">
+      <SectionCard title={m.calendar.sectionTitle}>
         <ErrorState onRetry={() => void useDemoRuntimeStore.getState().retryHydration()} />
       </SectionCard>
     );
@@ -73,7 +75,7 @@ export function CalendarView() {
   // full card width to wrap into (docs/06 section 3.3 "1024px: toolbar wraps view switch below
   // the date nav if needed").
   return (
-    <SectionCard title="Schedule">
+    <SectionCard title={m.calendar.sectionTitle}>
       {status !== 'ready' || !demoToday || !demoNow ? (
         <CalendarSkeleton />
       ) : (

@@ -20,7 +20,12 @@ export interface ClassDetailData {
   instructors: Instructor[];
   sessions: SessionCard[]; // this class type's schedule, chronological, cancelled sessions excluded
   weekdayBookings: ClassWeekdayBookingPoint[];
-  highlightDay: string; // today's weekday label, matches one entry in weekdayBookings ('Mon'...'Sun')
+  // Today's weekday CODE ('Mon'...'Sun'), matching one entry's `day` in weekdayBookings - a
+  // locale-free matching key, not a rendered label (docs/02-ARCHITECTURE.md section 1: this
+  // hook still must not pick a locale, since class-weekday-chart.tsx compares this value
+  // directly against `weekdayBookings[].day` to find the bar to highlight). The chart is where
+  // it gets translated for display, through `m.classes.weekdayShort`.
+  highlightDay: string;
 }
 
 // null while the demo clock has not hydrated yet, or once it has, when classTypeId does not

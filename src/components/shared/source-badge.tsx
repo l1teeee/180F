@@ -9,9 +9,10 @@ import type { BookingSource } from '@/domain/types';
 
 export interface SourceBadgeProps {
   source: BookingSource;
+  label?: string; // override the default label from BOOKING_SOURCE_STYLE, e.g. a translated one
 }
 
-export function SourceBadge({ source }: SourceBadgeProps) {
+export function SourceBadge({ source, label }: SourceBadgeProps) {
   const style = BOOKING_SOURCE_STYLE[source];
-  return <Badge variant={ACCENT_BADGE_VARIANT[style.accent]}>{style.label}</Badge>;
+  return <Badge variant={ACCENT_BADGE_VARIANT[style.accent]}>{label ?? style.label}</Badge>;
 }

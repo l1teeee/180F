@@ -5,7 +5,8 @@
 import { useMemo } from 'react';
 import { indexBookingsBySession, selectSessionOccupancy, selectSessionsByClassType } from '@/domain/selectors';
 import type { ISODate, SessionWithOccupancy } from '@/domain/types';
-import { addDaysISO, buildISODateTime, daysBetweenISO, formatWeekdayShort, getDayOfMonth } from '@/lib/dates';
+import { useDateLocale } from '@/hooks/use-date-locale';
+import { addDaysISO, buildISODateTime, daysBetweenISO, getDayOfMonth } from '@/lib/dates';
 import { useBookingStore } from '@/stores/booking.store';
 import { useDemoRuntimeStore } from '@/stores/demo-runtime.store';
 import { useSessionStore } from '@/stores/session.store';
@@ -13,7 +14,7 @@ import { useSettingsStore } from '@/stores/settings.store';
 
 export interface PublicDateOption {
   date: ISODate;
-  label: string; // 'THU 17' (master plan section 36's literal pattern)
+  label: string; // 'THU 17' (en) / 'JUE 17' (es) - master plan section 36's literal pattern, in the active locale
   available: boolean;
 }
 
@@ -30,6 +31,13 @@ export function usePublicBookingSessions(classId: string | null): UsePublicBooki
   const demoToday = useDemoRuntimeStore((state) => state.demoToday);
   const demoNow = useDemoRuntimeStore((state) => state.demoNow);
   const settings = useSettingsStore((state) => state.settings);
+  // This hook is presentation layer (a React hook, not a domain selector), so unlike
+  // domain/selectors/** it may pick a locale - src/lib/dates.ts's formatWeekdayShort stays
+  // locale-free for the selectors that still depend on it (docs/02-ARCHITECTURE.md section 1).
+  // Formatting the day-pill label here, rather than returning the raw ISODate and formatting it
+  // in date-step.tsx, keeps that component a pure renderer of `PublicDateOption[]` with no date
+  // math of its own to duplicate.
+  const { formatWeekdayShort } = useDateLocale();
 
   return useMemo(() => {
     if (!classId || !demoToday || !demoNow || !settings) return EMPTY_RESULT;
@@ -70,5 +78,5 @@ export function usePublicBookingSessions(classId: string | null): UsePublicBooki
     });
 
     return { dates, sessionsByDate };
-  }, [classId, sessions, bookings, demoToday, demoNow, settings]);
+  }, [classId, sessions, bookings, demoToday, demoNow, settings, formatWeekdayShort]);
 }

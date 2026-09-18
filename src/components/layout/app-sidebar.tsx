@@ -8,10 +8,13 @@
 // --color-surface. Below lg neither applies - this component simply does not render (MobileNav is
 // the drawer, docs/03 section 8).
 import { useEffect, useRef } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { ChevronLeft, ChevronRight, Circle, LogOut, Plus, type LucideIcon } from 'lucide-react';
 import type { NavItem } from '@/domain/constants';
+import { useMessages } from '@/hooks/use-messages';
+import type { Messages } from '@/i18n/messages';
 import { useAuth } from '@/services/auth/auth-context';
 import { ADMIN_ACCENT, ADMIN_SEED, paletteForAccent } from '@/lib/avatar';
 import { AvatarBlobatar } from '@/components/ui/avatar';
@@ -48,12 +51,19 @@ const FALLBACK_STUDIO_NAME = '180 Fitness Studio';
 // together - not a separate un-framed mode.
 const RAIL_IDLE = 'text-white/72';
 const RAIL_HOVER = 'hover:bg-shell-soft hover:text-white';
-// Shape differs by state (circle collapsed, field expanded, docs/03 section 14.1); the white
-// surface + purple-deep icon is the same override in both.
-const RAIL_ACTIVE_COLLAPSED = 'bg-white text-purple-deep';
-const RAIL_ACTIVE_EXPANDED = 'bg-white text-purple-deep';
+// docs/03 section 14.1 specifies a floating white circle for the collapsed active item; client
+// request supersedes that (same override as section 15.3 already does to 14.1's colour table
+// above) - the active item now joins the panel in BOTH states, so this uses bg-background, not
+// bg-white, for the same reason RAIL_ACTIVE_EXPANDED does: --color-background is rgb(247,247,245),
+// not white, and a white fill would leave a visible seam against the panel.
+const RAIL_ACTIVE_COLLAPSED = 'bg-background text-purple-deep';
+// Client request: the expanded active tab must read as part of the content panel, not a
+// floating white chip a near-white seam away from it - bg-background (not bg-white) makes the
+// tab and the panel literally the same fill (rgb(247,247,245)).
+const RAIL_ACTIVE_EXPANDED = 'bg-background text-purple-deep';
 
 export function AppSidebar({ items }: AppSidebarProps) {
+  const m = useMessages();
   const { user, signOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -103,42 +113,27 @@ export function AppSidebar({ items }: AppSidebarProps) {
 
   const primaryItems = items.filter((item) => !SECONDARY_NAV_LABELS.has(item.label));
   const secondaryItems = items.filter((item) => SECONDARY_NAV_LABELS.has(item.label));
-  const userName = user?.name ?? 'Studio Admin';
+  const userName = user?.name ?? m.layout.studioAdminFallback;
 
   return (
     <aside
       data-slot="app-sidebar"
       data-collapsed={collapsed}
       style={{ width: collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH }}
-      className="hidden h-full shrink-0 flex-col overflow-hidden py-3 transition-[width] duration-[var(--duration-deliberate)] ease-out motion-reduce:transition-none lg:flex"
+      className="hidden h-full shrink-0 flex-col py-3 transition-[width] duration-[var(--duration-deliberate)] ease-out motion-reduce:transition-none lg:flex"
     >
-      {/* Collapse toggle - docs/03 section 14.2 point 2 */}
-      <div className={cn('flex px-3', collapsed && 'justify-center')}>
-        <button
-          type="button"
-          onClick={() => setSidebarCollapsed(!collapsed)}
-          aria-expanded={!collapsed}
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-pill transition-colors duration-[var(--duration-fast)] ease-out', RAIL_IDLE, RAIL_HOVER)}
-        >
-          {collapsed ? (
-            <ChevronRight className="h-4 w-4" aria-hidden="true" />
-          ) : (
-            <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-          )}
-        </button>
-      </div>
-
       {/* Brand - docs/03 section 14.2 point 1. Collapsed: gap-0 and a forced w-0 on the label are
           required, not cosmetic - the label stays mounted (opacity-0, see RailLabel) for the width
           transition, and a naked flex-shrink would otherwise let it claim the row's free space,
           leaving justify-center nothing to center the icon with (it lands flush left instead). */}
       <div className={cn('flex h-12 shrink-0 items-center gap-2.5 px-3', collapsed && 'justify-center gap-0 px-0')}>
+        {/* Client-supplied mark (public/brand/mark.png) - studio name stays live text
+            per ADR-019, so only the monogram is baked into an image. */}
         <span
           aria-hidden="true"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-chip bg-white text-xs font-bold text-purple-deep"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-pill bg-white/10"
         >
-          180
+          <Image src="/brand/mark.png" alt="" width={437} height={256} className="w-[22px] h-auto" />
         </span>
         <RailLabel collapsed={collapsed} className={cn('text-[15px] font-bold text-white', collapsed && 'w-0')}>
           {studioName}
@@ -150,31 +145,57 @@ export function AppSidebar({ items }: AppSidebarProps) {
         <button
           type="button"
           onClick={handleNewBooking}
-          aria-label="New booking"
+          aria-label={m.layout.newBooking}
           className={cn(
             'flex h-11 shrink-0 items-center gap-2 rounded-pill bg-purple-deep text-white transition-[opacity] duration-[var(--duration-fast)] ease-out hover:opacity-90 active:scale-[0.98] active:duration-[var(--duration-instant)]',
-            collapsed ? 'w-11 justify-center' : 'w-full px-4'
+            collapsed ? 'w-11 justify-center gap-0' : 'w-full px-4'
           )}
         >
           <Plus className="h-5 w-5 shrink-0" aria-hidden="true" />
-          <RailLabel collapsed={collapsed} className="text-sm font-semibold">
-            New booking
+          <RailLabel collapsed={collapsed} className={cn('text-sm font-semibold', collapsed && 'w-0')}>
+            {m.layout.newBooking}
           </RailLabel>
         </button>
       </div>
 
-      <RailNav items={primaryItems} pathname={pathname} collapsed={collapsed} label="Primary navigation" />
-      <div role="separator" className={cn('my-3 shrink-0 bg-shell-line', collapsed ? 'mx-auto h-px w-4' : 'mx-3 h-px')} />
-      <RailNav items={secondaryItems} pathname={pathname} collapsed={collapsed} label="Secondary navigation" />
+      {/* docs/03 section 15.2: hidden on purpose - this is a 64px-wide chrome rail, and any
+          native scrollbar gutter here would eat horizontal space and shift the collapsed icons
+          off-centre again. Wheel, trackpad and keyboard scrolling still work with no visible
+          scrollbar. */}
+      <div className="flex min-h-0 shrink flex-col overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <RailNav items={primaryItems} pathname={pathname} collapsed={collapsed} label={m.layout.primaryNavigation} m={m} />
+      </div>
+
+      {/* Collapse toggle - docs/03 section 14.2 point 2. Client request: moved off the top of the
+          rail and onto the rail's right edge, straddling the seam at this cluster separator, so it
+          reads as a seam control rather than a floating chevron above the brand. */}
+      <div className={cn('relative shrink-0', collapsed ? 'my-[clamp(12px,1.5vh,20px)]' : 'my-3')}>
+        <div role="separator" className={cn('bg-shell-line', collapsed ? 'mx-auto h-px w-4' : 'mx-3 h-px')} />
+        <button
+          type="button"
+          onClick={() => setSidebarCollapsed(!collapsed)}
+          aria-expanded={!collapsed}
+          aria-label={collapsed ? m.layout.expandSidebar : m.layout.collapseSidebar}
+          className="absolute top-1/2 right-0 z-40 flex h-7 w-7 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-pill border border-border bg-surface text-text-secondary shadow-card transition-colors duration-[var(--duration-fast)] ease-out before:absolute before:-inset-2 before:content-[''] hover:bg-surface-muted hover:text-ink"
+        >
+          {collapsed ? (
+            <ChevronRight className="h-4 w-4" aria-hidden="true" />
+          ) : (
+            <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+          )}
+        </button>
+      </div>
+
+      <RailNav items={secondaryItems} pathname={pathname} collapsed={collapsed} label={m.layout.secondaryNavigation} m={m} />
 
       {/* Bottom cluster - docs/03 section 14.2 point 7, pinned with margin-top: auto */}
       <div className="mt-auto shrink-0 px-3 pt-2">
         <DropdownMenu>
           <DropdownMenuTrigger
-            aria-label="Account menu"
+            aria-label={m.layout.accountMenu}
             className={cn(
               'flex items-center gap-2.5 rounded-pill text-left transition-colors duration-[var(--duration-fast)] ease-out hover:bg-shell-soft',
-              collapsed ? 'h-10 w-10 justify-center' : 'w-full p-1'
+              collapsed ? 'h-10 w-10 justify-center gap-0' : 'w-full p-1'
             )}
           >
             <AvatarBlobatar
@@ -185,22 +206,22 @@ export function AppSidebar({ items }: AppSidebarProps) {
               fallbackInitials="A"
               fallbackClassName="bg-purple-xsoft"
             />
-            <RailLabel collapsed={collapsed} className="flex min-w-0 flex-col">
+            <RailLabel collapsed={collapsed} className={cn('flex min-w-0 flex-col', collapsed && 'w-0')}>
               <span className="truncate text-sm font-semibold text-white">{userName}</span>
-              <span className="truncate text-xs text-white/60">Administrator</span>
+              <span className="truncate text-xs text-white/60">{m.layout.administrator}</span>
             </RailLabel>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" side="right" className="w-52">
             <DropdownMenuLabel className="normal-case tracking-normal">
               <span className="flex flex-col gap-0.5 font-normal">
                 <span className="text-sm font-semibold text-ink">{userName}</span>
-                <span className="text-xs text-text-secondary">Administrator</span>
+                <span className="text-xs text-text-secondary">{m.layout.administrator}</span>
               </span>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem variant="destructive" onSelect={handleLogout}>
               <LogOut aria-hidden="true" />
-              Logout
+              {m.layout.logout}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -244,20 +265,29 @@ function RailNav({
   pathname,
   collapsed,
   label,
+  m,
 }: {
   items: NavItem[];
   pathname: string;
   collapsed: boolean;
   label: string;
+  m: Messages;
 }) {
+  // docs/03 section 14.1 wants 12px between collapsed items and 20px between clusters, but nine
+  // 40px circles plus the rail's fixed chrome only clear that rhythm above roughly 705px of
+  // viewport height. Below that the rail scrolls, and the scrollbar is hidden (see the overflow
+  // comment above), so a fixed 12px would push Settings off the bottom with no visible cue on a
+  // 1366x768 laptop. Scaling with viewport height keeps the spec rhythm on tall screens and falls
+  // back to the pre-existing 6px floor on short ones.
   return (
-    <nav aria-label={label} className="flex flex-col gap-1.5 overflow-y-auto px-3 py-1">
+    <nav aria-label={label} className={cn('flex shrink-0 flex-col px-3 py-1', collapsed ? 'gap-[clamp(6px,0.9vh,12px)]' : 'gap-1.5')}>
       {items.map((item) => {
         const Icon = NAV_ICONS[item.icon] ?? Circle;
         const active = isActiveRoute(pathname, item.href);
 
+        const navLabel = m.layout.nav[item.href] ?? item.label;
         const button = (
-          <RailNavButton key={item.href} item={item} Icon={Icon} active={active} collapsed={collapsed} />
+          <RailNavButton key={item.href} item={item} label={navLabel} Icon={Icon} active={active} collapsed={collapsed} />
         );
 
         if (!collapsed) return button;
@@ -268,7 +298,7 @@ function RailNav({
         return (
           <Tooltip key={item.href} delayDuration={300}>
             <TooltipTrigger asChild>{button}</TooltipTrigger>
-            <TooltipContent side="right">{item.label}</TooltipContent>
+            <TooltipContent side="right">{navLabel}</TooltipContent>
           </Tooltip>
         );
       })}
@@ -278,11 +308,13 @@ function RailNav({
 
 function RailNavButton({
   item,
+  label,
   Icon,
   active,
   collapsed,
 }: {
   item: NavItem;
+  label: string;
   Icon: LucideIcon;
   active: boolean;
   collapsed: boolean;
@@ -294,16 +326,36 @@ function RailNavButton({
       // Icon-only in the collapsed state needs its own accessible name - the tooltip's
       // aria-describedby (wired by Radix when collapsed) supplements this, it does not replace
       // it (docs/03 section 14.5).
-      aria-label={collapsed ? item.label : undefined}
+      aria-label={collapsed ? label : undefined}
       className={cn(
         'relative flex shrink-0 items-center gap-3 text-sm font-semibold transition-colors duration-[var(--duration-fast)] ease-out',
         collapsed
-          ? cn('mx-auto h-10 w-10 justify-center rounded-pill', active ? RAIL_ACTIVE_COLLAPSED : cn(RAIL_IDLE, RAIL_HOVER))
-          : cn('h-11 rounded-field px-3', active ? RAIL_ACTIVE_EXPANDED : cn(RAIL_IDLE, RAIL_HOVER))
+          ? active
+            ? // Same panel-join treatment as the expanded active tab (below), and for the same
+              // reason: no explicit width class, so the flex column's default cross-axis stretch
+              // sizes the link to the nav's content box (auto width, not w-full/100% - an
+              // explicit 100% would lock to that box and the negative margin below would only
+              // shift layout, not extend the box's own right edge). -mr-3 cancels the nav's own
+              // `px-3` so the stretched box's right edge extends by that same 12px to the rail's
+              // edge at x=64, flush against the panel; pr-3 puts that 12px back as inner padding
+              // so justify-center still lands the icon at the rail's x=32 axis (docs/03 section
+              // 14.3 - icons never move horizontally between states) instead of centring in the
+              // wider box. rounded-l-pill/rounded-r-none keeps a semicircular left cap so the
+              // collapsed rail keeps its circular language while the right side merges into the
+              // panel; rail-tab adds the concave fillets top/bottom.
+              cn('h-10 -mr-3 pr-3 justify-center gap-0 rounded-l-pill rounded-r-none rail-tab', RAIL_ACTIVE_COLLAPSED)
+            : cn('mx-auto h-10 w-10 justify-center gap-0 rounded-pill', RAIL_IDLE, RAIL_HOVER)
+          : active
+            ? // Flush to the rail's right edge (-mr-3 cancels the nav's own `px-3`) and rounded on
+              // the left only, so the active tab reads as the panel growing a tab rather than a
+              // separate pill; .rail-tab (globals.css) adds the concave fillets that curve the
+              // dark rail into the tab's top/bottom edges.
+              cn('h-11 rounded-l-field rounded-r-none px-3 -mr-3 rail-tab', RAIL_ACTIVE_EXPANDED)
+            : cn('h-11 rounded-field px-3', RAIL_IDLE, RAIL_HOVER)
       )}
     >
       <Icon aria-hidden="true" className="h-[18px] w-[18px] shrink-0" />
-      <RailLabel collapsed={collapsed}>{item.label}</RailLabel>
+      <RailLabel collapsed={collapsed} className={collapsed ? 'w-0' : undefined}>{label}</RailLabel>
     </Link>
   );
 }

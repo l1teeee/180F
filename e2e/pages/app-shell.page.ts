@@ -32,9 +32,9 @@ export class AppShellPage {
     this.globalSearchInput = page.getByRole('textbox', { name: /search customers, classes/i });
     this.notificationsButton = page.getByRole('button', { name: /notifications/i });
     this.helpButton = page.getByRole('button', { name: /^help$/i });
-    // Two "Account menu" buttons exist (one on the rail, one in the top bar) - scope to the
-    // banner landmark to pick the top bar's one unambiguously.
-    this.profileMenuButton = page.getByRole('banner').getByRole('button', { name: /account menu/i });
+    // The top bar no longer carries an account menu (it lives only on the rail/drawer now), so
+    // there is a single "Account menu" button and no landmark scoping is needed to disambiguate.
+    this.profileMenuButton = page.getByRole('button', { name: /account menu/i });
     this.logoutButton = page.getByRole('menuitem', { name: /log ?out/i });
   }
 

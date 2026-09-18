@@ -5,25 +5,27 @@
 import { TriangleAlert } from 'lucide-react';
 import { AvatarBlobatar } from '@/components/ui/avatar';
 import { StatusBadge } from '@/components/shared/status-badge';
+import type { Messages } from '@/i18n/messages';
 import type { SessionCard } from '@/domain/types';
+import { useDateLocale } from '@/hooks/use-date-locale';
+import { useMessages } from '@/hooks/use-messages';
 import { paletteForAccent } from '@/lib/avatar';
-import { formatDisplayDateShort, formatDisplayTime } from '@/lib/dates';
 
 function initialsFor(name: string): string {
   const trailingNumber = /(\d{1,2})\s*$/.exec(name.trim());
   return trailingNumber ? trailingNumber[1].padStart(2, '0') : name.slice(0, 2).toUpperCase();
 }
 
-function SessionOccupancyTag({ session }: { session: SessionCard }) {
+function SessionOccupancyTag({ session, m }: { session: SessionCard; m: Messages['classes'] }) {
   if (session.overbooked) {
     return (
       <span className="inline-flex h-[26px] shrink-0 items-center gap-1.5 rounded-pill bg-danger-soft px-2.5 text-xs font-semibold whitespace-nowrap text-danger-text">
         <TriangleAlert aria-hidden="true" className="size-3" />
-        {session.booked}/{session.capacity} · Overbooked
+        {session.booked}/{session.capacity} · {m.overbooked}
       </span>
     );
   }
-  return <StatusBadge status={session.occupancyState} label={`${session.booked}/${session.capacity} spots`} />;
+  return <StatusBadge status={session.occupancyState} label={m.spotsLabel(session.booked, session.capacity)} />;
 }
 
 export interface ClassScheduleListProps {
@@ -31,8 +33,11 @@ export interface ClassScheduleListProps {
 }
 
 export function ClassScheduleList({ sessions }: ClassScheduleListProps) {
+  const m = useMessages();
+  const { formatDisplayDateShort, formatDisplayTime } = useDateLocale();
+
   if (sessions.length === 0) {
-    return <p className="py-6 text-center text-sm text-text-secondary">No sessions scheduled.</p>;
+    return <p className="py-6 text-center text-sm text-text-secondary">{m.classes.emptyStates.noSessionsScheduled}</p>;
   }
 
   return (
@@ -59,7 +64,7 @@ export function ClassScheduleList({ sessions }: ClassScheduleListProps) {
               <span className="truncate text-xs text-text-secondary">{session.room}</span>
             </div>
           </div>
-          <SessionOccupancyTag session={session} />
+          <SessionOccupancyTag session={session} m={m.classes} />
         </div>
       ))}
     </div>

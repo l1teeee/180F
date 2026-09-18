@@ -16,7 +16,9 @@ export const metadata: Metadata = {
   title: "180 Fitness Studio",
   description: "Studio management and class booking demo",
   icons: {
-    icon: "/favicon.svg",
+    // Client-supplied favicon source (public/brand/icon.png) - public/favicon.svg is left
+    // on disk untouched.
+    icon: "/brand/icon.png",
   },
 };
 

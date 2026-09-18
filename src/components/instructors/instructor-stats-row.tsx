@@ -3,18 +3,25 @@
 // percentage points) - every value itself already comes from selectInstructorStats.
 import { StatCard } from '@/components/shared/stat-card';
 import type { InstructorWithStats } from '@/domain/types';
+import { useMessages } from '@/hooks/use-messages';
 
 function toPercentValue(rate: number): number {
   return Math.round(rate * 100);
 }
 
 export function InstructorStatsRow({ instructor }: { instructor: InstructorWithStats }) {
+  const m = useMessages();
   return (
     <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-      <StatCard label="Classes this month" value={instructor.classesThisMonth} accent="purple" />
-      <StatCard label="Reservations" value={instructor.reservations} accent="blue" />
-      <StatCard label="Occupancy" value={toPercentValue(instructor.occupancyRate)} unit="%" accent="green" />
-      <StatCard label="Rating" value={instructor.rating.toFixed(1)} unit="/ 5" accent="yellow" />
+      <StatCard label={m.instructors.stats.classesThisMonth} value={instructor.classesThisMonth} accent="purple" />
+      <StatCard label={m.instructors.stats.reservations} value={instructor.reservations} accent="blue" />
+      <StatCard label={m.instructors.stats.occupancy} value={toPercentValue(instructor.occupancyRate)} unit="%" accent="green" />
+      <StatCard
+        label={m.instructors.stats.rating}
+        value={instructor.rating.toFixed(1)}
+        unit={m.instructors.stats.ratingUnit}
+        accent="yellow"
+      />
     </div>
   );
 }

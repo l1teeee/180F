@@ -5,7 +5,7 @@
 // a spec that needs a clean, un-mutated session should still call `signIn` itself on a fresh
 // context instead of reusing this fixture.
 import path from 'node:path';
-import { test as hydrationTest, expect, withHydrationAwareGoto } from './hydration';
+import { test as hydrationTest, expect, seedEnglishLocale, withHydrationAwareGoto } from './hydration';
 import type { Page } from '@playwright/test';
 
 export const DEMO_ADMIN_EMAIL = 'admin@demo.com';
@@ -35,8 +35,12 @@ export const test = hydrationTest.extend<AuthFixtures, AuthWorkerFixtures>({
   adminStorageStatePath: [
     async ({ browser }, provide) => {
       const context = await browser.newContext();
-      const page = withHydrationAwareGoto(await context.newPage());
-      await signIn(page);
+      const page = await context.newPage();
+      // See hydration.ts's E2E_LOCALE_STORAGE_KEY comment: this suite asserts English copy on
+      // purpose, so English is seeded here before login even runs - the saved storage state
+      // below then carries it into every test that reuses this session.
+      await seedEnglishLocale(page);
+      await signIn(withHydrationAwareGoto(page));
       await context.storageState({ path: STORAGE_STATE_PATH });
       await context.close();
       await provide(STORAGE_STATE_PATH);
@@ -46,8 +50,11 @@ export const test = hydrationTest.extend<AuthFixtures, AuthWorkerFixtures>({
 
   authenticatedPage: async ({ browser, adminStorageStatePath }, provide) => {
     const context = await browser.newContext({ storageState: adminStorageStatePath });
-    const page = withHydrationAwareGoto(await context.newPage());
-    await provide(page);
+    const page = await context.newPage();
+    // Belt and suspenders with the storage state saved above: addInitScript re-seeds English on
+    // every navigation in this context too, in case a test clears localStorage mid-run.
+    await seedEnglishLocale(page);
+    await provide(withHydrationAwareGoto(page));
     await context.close();
   },
 });

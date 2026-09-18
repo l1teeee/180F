@@ -489,17 +489,19 @@ The sidebar has two desktop states. Below `lg` neither applies: it stays the dra
 |---|---|---|
 | Width | 240 px | 64 px |
 | Items | 44 px tall, icon plus label, `--radius-field` | 40 px circular buttons, centred, icon only |
-| Active | `--color-purple-xsoft` background, ink text, 3 px purple left rail | `--color-purple-xsoft` filled circle, ink icon, no rail |
+| Active | the integrated tab, see 14.6 | the integrated tab, see 14.6 |
 | Hover | `--color-surface-muted` | `--color-surface-muted` circle |
 | Labels | visible | delivered by tooltip, 300 ms delay, anchored right at 8 px |
 | Section separators | 1 px `--color-border` with a small caps label | 1 px `--color-border`, 16 px wide, centred, no label |
 
-The collapsed rail is a column of circles on `--color-surface`, not a squeezed copy of the expanded list. Vertical rhythm is 12 px between items and 20 px between clusters.
+The collapsed rail is a column of circles on `--color-surface`, not a squeezed copy of the expanded list.
+
+**Vertical rhythm.** The target is 12 px between items and 20 px between clusters. Nine 40 px circles plus the rail's fixed chrome only fit that above roughly 705 px of viewport height; below it the rail scrolls, and its scrollbar is hidden (any gutter inside a 64 px rail would shift the centred icons off their column), so a fixed 12 px would push Settings out of sight on a 1366x768 laptop with no cue. The rhythm therefore relaxes with the viewport — `clamp(6px, 0.9vh, 12px)` between items and `clamp(12px, 1.5vh, 20px)` between clusters — giving the spec's spacing on a tall screen and the older, tighter floor on a short one.
 
 ### 14.2 Anatomy, top to bottom
 
 1. **Brand.** Expanded: the logo mark plus "180 Fitness". Collapsed: the mark alone, 32 px, centred.
-2. **Collapse toggle.** A 28 px circular ghost button, `ChevronLeft` when expanded and `ChevronRight` when collapsed, sitting at the top of the rail. It carries `aria-expanded` and an `aria-label` that reads "Collapse sidebar" or "Expand sidebar".
+2. **Collapse toggle.** A 28 px circle, `ChevronLeft` when expanded and `ChevronRight` when collapsed, carrying `aria-expanded` and an `aria-label` that reads "Collapse sidebar" or "Expand sidebar". It sits **on the seam**, straddling the rail's right edge, vertically centred on the cluster separator between primary and secondary navigation — not at the top of the rail, where it read as a stray chevron floating above the brand (client request). Because it spans two grounds it belongs to the seam rather than to the rail's white-on-frame palette: `--color-surface` fill, 1 px `--color-border`, `--shadow-card`. It is drawn at 28 px but keeps the 40 px hit target of section 10 through an inset pseudo-element.
 3. **Primary action.** A 44 px circle filled `--color-ink` with a white `Plus`, opening the new booking dialog. This is the one strong accent in the rail and the direct equivalent of the expanded sidebar's hero CTA — it is the reference's black circle, carrying our meaning rather than its own.
 4. **Primary navigation.** Dashboard, Calendar, Bookings, Customers, Classes, Instructors, Memberships — the list from master plan §15, with its existing Lucide icons. The icons do not change between states.
 5. **Separator.**
@@ -519,6 +521,15 @@ Collapsed state lives in `useUiStore.sidebarCollapsed` and is persisted to `loca
 The rail is still a `nav` with the same accessible structure; only the visual presentation changes. Every collapsed item keeps its accessible name through the tooltip's `aria-describedby` or an `aria-label`, never through the icon alone. Tooltips are keyboard reachable, so a Tab through the collapsed rail announces each destination. Focus order does not change between states, and collapsing never moves focus.
 
 ---
+
+### 14.6 The active item is part of the content panel
+
+The active nav item is not a chip floating on the rail. It is a tab the content panel grew, and it reads that way in **both** width states — this supersedes 14.1's earlier "purple-xsoft filled circle" for the collapsed state, the same way 15.3 supersedes 14.1's colour table for the framed rail.
+
+- **Fill is `--color-background`, not `--color-surface`.** The panel is `--color-background`; a white item would leave a visible seam between two near-whites. The icon and label stay `--color-purple-deep`.
+- **It reaches the rail's right edge**, cancelling the nav's own right padding, so it meets the panel with no gap. Only the left corners are rounded: `--radius-field` expanded, a full semicircular cap collapsed, which keeps the collapsed rail's circular language.
+- **Concave fillets above and below.** Without them the join is a hard T-junction. Each is a 12 px square of panel colour with a quarter disc masked out, so the dark frame curves into the tab's edge instead of meeting it at a corner.
+- **Icons do not move.** Collapsed, the tab spans 52 px but keeps 12 px of inner right padding, so its icon still centres on the rail's axis at 32 px, in one column with every inactive icon. Column alignment is what the eye reads here, not the tab's own midpoint — 14.3's rule holds.
 
 ## 15. The application frame
 

@@ -9,8 +9,10 @@ import { Field, FieldError, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/cn"
 import type { PublicBookingInputSchema } from "@/domain/schemas"
+import type { BookingRejectionReason } from "@/domain/selectors"
 import type { ClassType, SessionWithOccupancy } from "@/domain/types"
-import { formatDisplayDate, formatDisplayTime } from "@/lib/dates"
+import { useDateLocale } from "@/hooks/use-date-locale"
+import { useMessages } from "@/hooks/use-messages"
 import { ACCENT_ICON_BG_CLASS, ClassIcon } from "@/components/shared/class-icon"
 
 // Master plan section 38: fields Name, Phone, Email, in that order, validated by the existing
@@ -23,8 +25,7 @@ export function CustomerStep({
   session,
   form,
   mutation,
-  submitError,
-  isSessionFullError,
+  submitErrorReason,
   onSubmit,
   onBack,
   onChooseAnotherTime,
@@ -33,22 +34,33 @@ export function CustomerStep({
   session: SessionWithOccupancy
   form: UseFormReturn<PublicBookingInputSchema>
   mutation: "idle" | "pending"
-  submitError: string | null
-  // Whether `submitError` was specifically a session_full rejection - tracked by the wizard
-  // hook from the store action's actual result, not re-derived from `session.occupancyState`
-  // here: that prop is a snapshot taken at step 3 (docs/06 section 3.15) and does not
-  // live-update when a later submit finds the session has since filled up.
-  isSessionFullError: boolean
+  // Set exactly when the last submit was rejected, to the store action's own stable `reason`
+  // CODE (useBookingStore().createPublicBooking(), this namespace's write set) - never a
+  // sentence. m.publicBooking.customerStep.errors.forReason maps it to copy below.
+  submitErrorReason: BookingRejectionReason | null
   onSubmit: (values: PublicBookingInputSchema) => void
   onBack: () => void
   onChooseAnotherTime: () => void
 }) {
+  const m = useMessages()
+  const { formatDisplayDate, formatDisplayTime } = useDateLocale()
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = form
   const isPending = mutation === "pending" || isSubmitting
+
+  // publicBookingInputSchema (src/domain/schemas/public-booking-input.ts) is outside this
+  // namespace's write set and its messages are never rendered - each field has exactly one
+  // possible zod failure, so field identity alone picks the translated key (see
+  // src/i18n/dictionaries/es/publicBooking.ts).
+  const nameError = errors.name ? m.publicBooking.customerStep.errors.nameTooShort : undefined
+  const emailError = errors.email ? m.publicBooking.customerStep.errors.emailInvalid : undefined
+  const phoneError = errors.phone ? m.publicBooking.customerStep.errors.phoneTooShort : undefined
+
+  const isSessionFullError = submitErrorReason === "session_full"
+  const submitErrorText = submitErrorReason ? m.publicBooking.customerStep.errors.forReason(submitErrorReason) : null
 
   return (
     <div className="flex flex-col gap-5">
@@ -60,10 +72,10 @@ export function CustomerStep({
           className="relative flex w-fit items-center gap-1 text-sm font-semibold text-text-secondary transition-colors duration-[var(--duration-base)] ease-out before:absolute before:-inset-x-2 before:-inset-y-3 before:content-[''] hover:text-ink disabled:pointer-events-none disabled:opacity-50"
         >
           <ChevronLeft className="size-4" aria-hidden="true" />
-          Change time
+          {m.publicBooking.backToTime}
         </button>
         <h1 tabIndex={-1} className="text-[22px] font-bold tracking-tight text-ink outline-none">
-          Your details
+          {m.publicBooking.customerStep.heading}
         </h1>
       </div>
 
@@ -88,59 +100,59 @@ export function CustomerStep({
         <input type="hidden" {...register("sessionId")} />
 
         <Field data-invalid={!!errors.name}>
-          <FieldLabel htmlFor="public-booking-name">Name</FieldLabel>
+          <FieldLabel htmlFor="public-booking-name">{m.publicBooking.customerStep.nameLabel}</FieldLabel>
           <Input
             id="public-booking-name"
             autoComplete="name"
-            placeholder="Jordan Rivera"
+            placeholder={m.publicBooking.customerStep.namePlaceholder}
             aria-invalid={!!errors.name}
             aria-describedby={errors.name ? "public-booking-name-error" : undefined}
             {...register("name")}
           />
-          <FieldError id="public-booking-name-error" errors={errors.name ? [errors.name] : undefined} />
+          {nameError ? <FieldError id="public-booking-name-error">{nameError}</FieldError> : null}
         </Field>
 
         <Field data-invalid={!!errors.phone}>
-          <FieldLabel htmlFor="public-booking-phone">Phone</FieldLabel>
+          <FieldLabel htmlFor="public-booking-phone">{m.publicBooking.customerStep.phoneLabel}</FieldLabel>
           <Input
             id="public-booking-phone"
             type="tel"
             autoComplete="tel"
-            placeholder="+57 300 000 0000"
+            placeholder={m.publicBooking.customerStep.phonePlaceholder}
             aria-invalid={!!errors.phone}
             aria-describedby={errors.phone ? "public-booking-phone-error" : undefined}
             {...register("phone")}
           />
-          <FieldError id="public-booking-phone-error" errors={errors.phone ? [errors.phone] : undefined} />
+          {phoneError ? <FieldError id="public-booking-phone-error">{phoneError}</FieldError> : null}
         </Field>
 
         <Field data-invalid={!!errors.email}>
-          <FieldLabel htmlFor="public-booking-email">Email</FieldLabel>
+          <FieldLabel htmlFor="public-booking-email">{m.publicBooking.customerStep.emailLabel}</FieldLabel>
           <Input
             id="public-booking-email"
             type="email"
             autoComplete="email"
-            placeholder="you@example.com"
+            placeholder={m.publicBooking.customerStep.emailPlaceholder}
             aria-invalid={!!errors.email}
             aria-describedby={errors.email ? "public-booking-email-error" : undefined}
             {...register("email")}
           />
-          <FieldError id="public-booking-email-error" errors={errors.email ? [errors.email] : undefined} />
+          {emailError ? <FieldError id="public-booking-email-error">{emailError}</FieldError> : null}
         </Field>
 
-        {submitError && (
+        {submitErrorText && (
           <div
             role="alert"
             className="flex flex-col gap-1.5 rounded-field border border-danger-soft bg-danger-soft px-3.5 py-3 text-sm font-medium text-danger-text"
           >
-            <span>{submitError}</span>
+            <span>{submitErrorText}</span>
             {isSessionFullError && (
               <button
                 type="button"
                 onClick={onChooseAnotherTime}
                 className="relative w-fit font-semibold underline underline-offset-2 before:absolute before:-inset-x-2 before:-inset-y-3 before:content-['']"
               >
-                Choose a different time
+                {m.publicBooking.customerStep.chooseAnotherTime}
               </button>
             )}
           </div>
@@ -148,7 +160,7 @@ export function CustomerStep({
 
         <Button type="submit" disabled={isPending} className="w-full">
           {isPending && <Loader2 aria-hidden="true" className="size-4 animate-spin" />}
-          Confirm reservation
+          {m.publicBooking.customerStep.submit}
         </Button>
       </form>
     </div>

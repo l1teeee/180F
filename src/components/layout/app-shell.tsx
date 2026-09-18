@@ -14,8 +14,9 @@
 // to the viewport (`h-screen overflow-hidden`) and only the content panel scrolls internally;
 // AppSidebar, the brand mark and the profile avatar stay put on the frame the way chrome should.
 import type { ReactNode } from 'react';
+import { usePathname } from 'next/navigation';
 import { NAV_ITEMS } from '@/domain/constants';
-import { useAuth } from '@/services/auth/auth-context';
+import { useMessages } from '@/hooks/use-messages';
 import { useUiStore } from '@/stores/ui.store';
 import { AppSidebar } from './app-sidebar';
 import { GlobalSearch } from './global-search';
@@ -27,9 +28,10 @@ export interface AppShellProps {
 }
 
 export function AppShell({ children }: AppShellProps) {
-  const { user } = useAuth();
+  const m = useMessages();
   const sidebarOpen = useUiStore((state) => state.sidebarOpen);
   const setSidebarOpen = useUiStore((state) => state.setSidebarOpen);
+  const pathname = usePathname();
 
   return (
     <div className="flex h-screen overflow-hidden bg-shell">
@@ -40,7 +42,7 @@ export function AppShell({ children }: AppShellProps) {
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-pill focus:bg-ink focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"
       >
-        Skip to main content
+        {m.layout.skipToMainContent}
       </a>
 
       <AppSidebar items={NAV_ITEMS} />
@@ -54,13 +56,20 @@ export function AppShell({ children }: AppShellProps) {
        * wider than its container - this is the one place that guarantees it regardless.
        */}
       <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto bg-background md:my-2 md:mr-2 md:rounded-[20px] md:shadow-[0_18px_50px_rgba(20,16,38,0.28)] lg:my-3 lg:mr-3 lg:rounded-[28px]">
-        <TopBar user={{ name: user?.name ?? 'Studio Admin', role: 'Administrator' }} />
+        <TopBar />
         <main
           id="main-content"
           tabIndex={-1}
           className="mx-auto w-full max-w-[1500px] flex-1 px-4 py-6 outline-none sm:px-6 lg:px-7 lg:py-7"
         >
-          {children}
+          {/* key={pathname} forces React to remount this subtree on every route change, which
+              restarts the .animate-fade-up CSS animation (docs/03 section 12.2 pattern 3) -
+              without the key the animation runs once on first load and never again. Reduced
+              motion is already handled globally: section 12.4's media query collapses
+              .animate-fade-up to an opacity-only fade, so nothing extra is needed here. */}
+          <div key={pathname} className="animate-fade-up">
+            {children}
+          </div>
         </main>
       </div>
 

@@ -20,10 +20,18 @@ import { useId, useMemo } from 'react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis } from 'recharts';
 import type { BarShapeProps, TooltipContentProps } from 'recharts';
 import type { WeeklyBookingPoint } from '@/domain/types';
+import { useDateLocale } from '@/hooks/use-date-locale';
+import { useMessages } from '@/hooks/use-messages';
+import type { Messages } from '@/i18n/messages';
 
 export interface WeeklyBookingsChartProps {
   data: WeeklyBookingPoint[];
 }
+
+// WeeklyBookingPoint no longer carries a `label` (docs/04-DOMAIN-MODEL.md, the domain layer
+// never picks a locale) - the weekday name is derived from `date` here, in the active language,
+// and threaded through as this local shape rather than re-deriving it at every render site.
+type ChartPoint = WeeklyBookingPoint & { label: string };
 
 const CHART_HEIGHT = 260;
 const CHART_TOP_MARGIN = 56; // headroom for the annotation pill above the tallest bar
@@ -32,23 +40,35 @@ const CHART_TOP_MARGIN = 56; // headroom for the annotation pill above the talle
 // are the props a *consumer* passes into <Tooltip>, not what a content renderer receives) left
 // at its own default generics so it matches <Tooltip content={CustomTooltip} /> below, which is
 // also left unparametrized.
-function CustomTooltip({ active, payload }: TooltipContentProps) {
-  if (!active || !payload?.length) return null;
-  // Recharts types the original datum loosely (`payload?: any` on BarRectangleItem) since it
-  // cannot know a consumer's row shape generically - this is the one place that gap is bridged
-  // back to our own domain type, not a blanket `any`.
-  const point = payload[0]?.payload as WeeklyBookingPoint | undefined;
-  if (!point) return null;
-  return (
-    <div className="rounded-card-sm bg-surface px-3 py-2 text-[13px] shadow-card">
-      <p className="font-medium text-text-secondary">{point.label}</p>
-      <p className="font-semibold text-ink tabular-nums">{point.bookings} bookings</p>
-    </div>
-  );
+// Takes `m` via closure (built inside WeeklyBookingsChart, per-render) rather than calling
+// useMessages() itself - Recharts invokes this as a plain render prop, not through React's own
+// tree, so it cannot rely on hook context.
+function buildCustomTooltip(m: Messages['dashboard']) {
+  return function CustomTooltip({ active, payload }: TooltipContentProps) {
+    if (!active || !payload?.length) return null;
+    // Recharts types the original datum loosely (`payload?: any` on BarRectangleItem) since it
+    // cannot know a consumer's row shape generically - this is the one place that gap is bridged
+    // back to our own local shape, not a blanket `any`.
+    const point = payload[0]?.payload as ChartPoint | undefined;
+    if (!point) return null;
+    return (
+      <div className="rounded-card-sm bg-surface px-3 py-2 text-[13px] shadow-card">
+        <p className="font-medium text-text-secondary">{point.label}</p>
+        <p className="font-semibold text-ink tabular-nums">{m.bookingsCount(point.bookings)}</p>
+      </div>
+    );
+  };
 }
 
-export function WeeklyBookingsChart({ data }: WeeklyBookingsChartProps) {
+export function WeeklyBookingsChart({ data: points }: WeeklyBookingsChartProps) {
   const hatchId = useId();
+  const m = useMessages();
+  const { formatWeekdayShort } = useDateLocale();
+  const CustomTooltip = useMemo(() => buildCustomTooltip(m.dashboard), [m]);
+  const data: ChartPoint[] = useMemo(
+    () => points.map((point) => ({ ...point, label: formatWeekdayShort(point.date) })),
+    [points, formatWeekdayShort],
+  );
   const highlightIndex = data.length - 1; // selectWeeklyBookingTrend: the last point is always demoToday
   const highlight = data[highlightIndex];
 
@@ -71,7 +91,7 @@ export function WeeklyBookingsChart({ data }: WeeklyBookingsChartProps) {
     const { x, y, width, height, index } = props;
     const isHighlight = index === highlightIndex;
     const radius = Math.min(width / 2, 16);
-    const label = `Today · ${highlight?.bookings ?? 0}`;
+    const label = m.dashboard.chartTodayLabel(highlight?.bookings ?? 0);
     const pillWidth = label.length * 6.5 + 20;
     const pillCenterX = x + width / 2;
 
@@ -124,10 +144,10 @@ export function WeeklyBookingsChart({ data }: WeeklyBookingsChartProps) {
   // name, so this reuses the sr-only summary text below instead of keeping two copies of it.
   const chartSummary =
     data.length > 0
-      ? `Weekly bookings from ${data[0]?.label} to ${data[highlightIndex]?.label}, ranging from ${min} to ${max} bookings. ${
-          highlight ? `${highlight.label} is highlighted at ${highlight.bookings} bookings.` : ''
+      ? `${m.dashboard.weeklyBookingsSummary(data[0]?.label ?? '', data[highlightIndex]?.label ?? '', min, max)} ${
+          highlight ? m.dashboard.weeklyBookingsHighlight(highlight.label, highlight.bookings) : ''
         }`
-      : 'No weekly booking data available.';
+      : m.dashboard.noWeeklyBookingData;
 
   return (
     <div className="flex flex-col gap-3">

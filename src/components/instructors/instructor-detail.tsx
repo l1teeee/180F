@@ -4,6 +4,7 @@
 // rather than mixing their markup inline, per CLAUDE.md "one abstraction level per function".
 import { SectionCard } from '@/components/shared/section-card';
 import type { AccentToken, InstructorWithStats, ISODate, SessionCard } from '@/domain/types';
+import { useMessages } from '@/hooks/use-messages';
 import { InstructorProfileCard } from './instructor-profile-card';
 import { InstructorSchedulePreview } from './instructor-schedule-preview';
 import { InstructorSessionList } from './instructor-session-list';
@@ -18,6 +19,7 @@ export interface InstructorDetailProps {
 }
 
 export function InstructorDetail({ instructor, accent, upcoming, recentClasses, demoToday }: InstructorDetailProps) {
+  const m = useMessages();
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
       <div className="lg:col-span-4">
@@ -27,15 +29,15 @@ export function InstructorDetail({ instructor, accent, upcoming, recentClasses, 
       <div className="flex flex-col gap-6 lg:col-span-8">
         <InstructorStatsRow instructor={instructor} />
 
-        <SectionCard title="Weekly schedule">
-          <InstructorSessionList sessions={upcoming} emptyMessage="No upcoming sessions this week." />
+        <SectionCard title={m.instructors.sections.weeklySchedule}>
+          <InstructorSessionList sessions={upcoming} emptyMessage={m.instructors.emptyStates.noUpcomingSessions} />
         </SectionCard>
 
-        <SectionCard title="Recent classes">
-          <InstructorSessionList sessions={recentClasses.slice(0, 6)} emptyMessage="No classes taught yet." />
+        <SectionCard title={m.instructors.sections.recentClasses}>
+          <InstructorSessionList sessions={recentClasses.slice(0, 6)} emptyMessage={m.instructors.emptyStates.noClassesTaught} />
         </SectionCard>
 
-        <SectionCard title="Schedule preview">
+        <SectionCard title={m.instructors.sections.schedulePreview}>
           <InstructorSchedulePreview sessions={upcoming} demoToday={demoToday} />
         </SectionCard>
       </div>

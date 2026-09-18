@@ -14,7 +14,8 @@ import { SourceBadge } from '@/components/shared/source-badge';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { selectPromotionEligibility, type PromotionEligibility } from '@/domain/selectors';
 import type { BookingRow } from '@/domain/types';
-import { formatDisplayDateShort, formatDisplayTime } from '@/lib/dates';
+import { useDateLocale } from '@/hooks/use-date-locale';
+import { useMessages } from '@/hooks/use-messages';
 import { useBookingStore } from '@/stores/booking.store';
 import { useDemoRuntimeStore } from '@/stores/demo-runtime.store';
 import { useSessionStore } from '@/stores/session.store';
@@ -33,8 +34,6 @@ export interface BookingsTableProps {
   // double-clicked (docs/08 section 8.1 style, mirrored at the row level for this action).
   promotingId: string | null;
 }
-
-const DEFAULT_PROMOTE_TITLE = 'This booking cannot be promoted yet.';
 
 // A waitlisted row may be promoted only while it would also be accepted as a brand-new confirmed
 // booking (ADR-024 point 3) - session not cancelled or started, a free seat, no other active
@@ -72,23 +71,36 @@ function usePromotionEligibilityByRow(rows: BookingRow[]): Map<string, Promotion
   }, [rows, bookings, sessions, settings, demoNow]);
 }
 
-const BASE_COLUMNS: DataTableColumn<BookingRow>[] = [
-  {
-    id: 'customer',
-    header: 'Customer',
-    cell: (row) => (
-      <div className="flex items-center gap-3">
-        <AvatarGroup people={[{ id: row.customer.id, name: row.customer.name, avatar: row.customer.avatar }]} max={1} size={32} />
-        <span className="font-medium text-ink">{row.customer.name}</span>
-      </div>
-    ),
-  },
-  { id: 'class', header: 'Class', cell: (row) => row.classType.name },
-  { id: 'instructor', header: 'Instructor', cell: (row) => row.instructor.name },
-  { id: 'date', header: 'Date', cell: (row) => formatDisplayDateShort(row.session.date) },
-  { id: 'time', header: 'Time', cell: (row) => formatDisplayTime(row.session.startTime) },
-  { id: 'source', header: 'Source', cell: (row) => <SourceBadge source={row.source} /> },
-];
+// Built from the active locale's messages and date formatting (both taken as arguments, rather
+// than a module-level constant array) so a language switch re-renders every column's header and
+// cell text.
+function buildBaseColumns(
+  m: ReturnType<typeof useMessages>,
+  formatDisplayDateShort: (date: BookingRow['session']['date']) => string,
+  formatDisplayTime: (time: BookingRow['session']['startTime']) => string,
+): DataTableColumn<BookingRow>[] {
+  return [
+    {
+      id: 'customer',
+      header: m.bookings.table.customer,
+      cell: (row) => (
+        <div className="flex items-center gap-3">
+          <AvatarGroup people={[{ id: row.customer.id, name: row.customer.name, avatar: row.customer.avatar }]} max={1} size={32} />
+          <span className="font-medium text-ink">{row.customer.name}</span>
+        </div>
+      ),
+    },
+    { id: 'class', header: m.bookings.table.class, cell: (row) => row.classType.name },
+    { id: 'instructor', header: m.bookings.table.instructor, cell: (row) => row.instructor.name },
+    { id: 'date', header: m.bookings.table.date, cell: (row) => formatDisplayDateShort(row.session.date) },
+    { id: 'time', header: m.bookings.table.time, cell: (row) => formatDisplayTime(row.session.startTime) },
+    {
+      id: 'source',
+      header: m.bookings.table.source,
+      cell: (row) => <SourceBadge source={row.source} label={m.bookings.bookingSourceLabel[row.source]} />,
+    },
+  ];
+}
 
 interface PromoteButtonProps {
   row: BookingRow;
@@ -102,6 +114,7 @@ interface PromoteButtonProps {
 // point 2: a control that can be refused must either explain itself disabled or accept the click
 // and report the outcome) - not capacity alone.
 function PromoteButton({ row, canPromote, title, promoting, onPromoteRequest }: PromoteButtonProps) {
+  const m = useMessages();
   return (
     <Button
       type="button"
@@ -113,7 +126,7 @@ function PromoteButton({ row, canPromote, title, promoting, onPromoteRequest }: 
         onPromoteRequest(row);
       }}
     >
-      Promote
+      {m.bookings.promote}
     </Button>
   );
 }
@@ -137,6 +150,8 @@ function BookingMobileCard({
   onCancelRequest: (row: BookingRow) => void;
   onPromoteRequest: (row: BookingRow) => void;
 }) {
+  const m = useMessages();
+  const { formatDisplayDateShort, formatDisplayTime } = useDateLocale();
   return (
     <div className="flex flex-col gap-3 rounded-card-sm border border-border bg-surface p-4">
       <div className="flex items-center justify-between gap-3">
@@ -145,8 +160,8 @@ function BookingMobileCard({
           <span className="truncate text-[15px] font-semibold text-ink">{row.customer.name}</span>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
-          <StatusBadge status={row.status} />
-          {row.status === 'waitlist' && canPromote ? <Badge variant="positive">Seat open</Badge> : null}
+          <StatusBadge status={row.status} label={m.bookings.bookingStatusLabel[row.status]} />
+          {row.status === 'waitlist' && canPromote ? <Badge variant="positive">{m.bookings.seatOpen}</Badge> : null}
         </div>
       </div>
       <div className="flex items-center justify-between gap-3 text-sm text-text-secondary">
@@ -158,7 +173,7 @@ function BookingMobileCard({
         </span>
       </div>
       <div className="flex items-center justify-between gap-3">
-        <SourceBadge source={row.source} />
+        <SourceBadge source={row.source} label={m.bookings.bookingSourceLabel[row.source]} />
         <div className="flex items-center gap-2">
           {row.status === 'waitlist' ? (
             <PromoteButton
@@ -173,7 +188,7 @@ function BookingMobileCard({
             <Button
               type="button"
               variant="icon"
-              aria-label={`Cancel booking for ${row.customer.name}`}
+              aria-label={m.bookings.cancelBookingFor(row.customer.name)}
               onClick={(event) => {
                 event.stopPropagation();
                 onCancelRequest(row);
@@ -195,28 +210,32 @@ export function BookingsTable({
   onPromoteRequest,
   promotingId,
 }: BookingsTableProps) {
+  const m = useMessages();
+  const { formatDisplayDateShort, formatDisplayTime } = useDateLocale();
   const eligibilityByBookingId = usePromotionEligibilityByRow(rows);
   const canPromoteRow = (row: BookingRow) => eligibilityByBookingId.get(row.id)?.allowed === true;
   const promoteTitleFor = (row: BookingRow) => {
     const eligibility = eligibilityByBookingId.get(row.id);
-    if (!eligibility) return DEFAULT_PROMOTE_TITLE;
-    return eligibility.allowed ? 'Promote to confirmed' : eligibility.message;
+    if (!eligibility) return m.bookings.promoteCannotYet;
+    return eligibility.allowed
+      ? m.bookings.promoteToConfirmed
+      : m.bookings.promotionRejectionReason(eligibility.reason, eligibility.limit);
   };
 
-  // Status and actions stay out of BASE_COLUMNS above because both need per-row eligibility -
+  // Status and actions stay out of buildBaseColumns above because both need per-row eligibility -
   // the "Seat open" signal (status cell) and the Promote control's enabled state (actions cell)
   // are the same fact, read once per row.
   const columns: DataTableColumn<BookingRow>[] = [
-    ...BASE_COLUMNS,
+    ...buildBaseColumns(m, formatDisplayDateShort, formatDisplayTime),
     {
       id: 'status',
-      header: 'Status',
+      header: m.bookings.table.status,
       cell: (row) => {
         const canPromote = row.status === 'waitlist' && canPromoteRow(row);
         return (
           <div className="flex items-center gap-1.5">
-            <StatusBadge status={row.status} />
-            {canPromote ? <Badge variant="positive">Seat open</Badge> : null}
+            <StatusBadge status={row.status} label={m.bookings.bookingStatusLabel[row.status]} />
+            {canPromote ? <Badge variant="positive">{m.bookings.seatOpen}</Badge> : null}
           </div>
         );
       },
@@ -243,7 +262,7 @@ export function BookingsTable({
             <Button
               type="button"
               variant="icon"
-              aria-label={`Cancel booking for ${row.customer.name}`}
+              aria-label={m.bookings.cancelBookingFor(row.customer.name)}
               onClick={(event) => {
                 event.stopPropagation();
                 onCancelRequest(row);
@@ -274,9 +293,9 @@ export function BookingsTable({
       )}
       emptyState={
         <EmptyState
-          title="No bookings found"
-          description="Try changing your filters or create a new booking."
-          action={{ label: 'Create booking', onClick: onCreateBooking }}
+          title={m.bookings.emptyState.title}
+          description={m.bookings.emptyState.description}
+          action={{ label: m.bookings.emptyState.action, onClick: onCreateBooking }}
         />
       }
     />

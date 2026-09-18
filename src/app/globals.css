@@ -194,6 +194,17 @@
     border-color: var(--color-purple);
     box-shadow: 0 0 0 3px rgba(120, 105, 212, 0.18);
   }
+
+  /*
+   * docs/03 section 15.2: the content panel is the scroll container and carries the frame's
+   * radius, but Chrome paints a classic scrollbar outside that radius - the default Windows
+   * scrollbar drew a square grey column over the panel's rounded top-right corner and cut the
+   * sticky top bar short. A thin thumb on a transparent track keeps the corner intact.
+   */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(23, 23, 23, 0.22) transparent;
+  }
 }
 
 /* Hatch pattern (docs/03 section 2) — fill for non-highlighted weekly-chart bars. */
@@ -444,6 +455,38 @@
   }
   .animate-drawer-in {
     animation: drawer-in var(--duration-deliberate) var(--ease-out) both;
+  }
+
+  /*
+   * docs/03 section 14/15: concave fillets that flow the expanded active rail tab into the
+   * content panel above and below it, instead of a hard T-junction where the tab meets the
+   * rail's right edge. Each fillet is a 12px square of panel colour sitting immediately
+   * above/below the tab, with a quarter disc masked away; the arc is centred on the square's
+   * corner furthest from the panel, so the dark rail curves smoothly into the tab's edge. The
+   * "+ 0.5px" mask stop is a one-pixel feather - without it the arc renders visibly jagged.
+   */
+  .rail-tab {
+    --rail-fillet: 12px;
+  }
+  .rail-tab::before,
+  .rail-tab::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    width: var(--rail-fillet);
+    height: var(--rail-fillet);
+    background: var(--color-background);
+    pointer-events: none;
+  }
+  .rail-tab::before {
+    top: calc(-1 * var(--rail-fillet));
+    -webkit-mask-image: radial-gradient(circle at 0 0, transparent var(--rail-fillet), #000 calc(var(--rail-fillet) + 0.5px));
+    mask-image: radial-gradient(circle at 0 0, transparent var(--rail-fillet), #000 calc(var(--rail-fillet) + 0.5px));
+  }
+  .rail-tab::after {
+    top: 100%;
+    -webkit-mask-image: radial-gradient(circle at 0 100%, transparent var(--rail-fillet), #000 calc(var(--rail-fillet) + 0.5px));
+    mask-image: radial-gradient(circle at 0 100%, transparent var(--rail-fillet), #000 calc(var(--rail-fillet) + 0.5px));
   }
 }
 

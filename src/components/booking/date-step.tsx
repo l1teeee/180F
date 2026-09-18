@@ -5,6 +5,7 @@ import { ChevronLeft } from "lucide-react"
 import { cn } from "@/lib/cn"
 import type { ISODate } from "@/domain/types"
 import type { PublicDateOption } from "@/hooks/use-public-booking-sessions"
+import { useMessages } from "@/hooks/use-messages"
 
 // Master plan section 36: horizontal date selector, selected state unmistakable, days with no
 // availability visibly unavailable. Unavailable days are `disabled` (native, non-colour
@@ -24,6 +25,7 @@ export function DateStep({
   onSelect: (date: ISODate) => void
   onBack: () => void
 }) {
+  const m = useMessages()
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-1.5">
@@ -33,16 +35,16 @@ export function DateStep({
           className="relative flex w-fit items-center gap-1 text-sm font-semibold text-text-secondary transition-colors duration-[var(--duration-base)] ease-out before:absolute before:-inset-x-2 before:-inset-y-3 before:content-[''] hover:text-ink"
         >
           <ChevronLeft className="size-4" aria-hidden="true" />
-          Change class
+          {m.publicBooking.backToClass}
         </button>
         <h1 tabIndex={-1} className="text-[22px] font-bold tracking-tight text-ink outline-none">
-          Choose a date
+          {m.publicBooking.dateStep.heading}
         </h1>
-        <p className="text-sm text-text-secondary">{classTypeName} &middot; pick the day that works for you.</p>
+        <p className="text-sm text-text-secondary">{m.publicBooking.dateStep.subtitle(classTypeName)}</p>
       </div>
       <div
         role="group"
-        aria-label="Available dates"
+        aria-label={m.publicBooking.dateStep.availableDatesLabel}
         className="-mx-4 flex gap-2.5 overflow-x-auto px-4 pb-2 min-[768px]:-mx-6 min-[768px]:px-6 min-[1024px]:mx-0 min-[1024px]:px-0"
       >
         {dates.map((option) => {

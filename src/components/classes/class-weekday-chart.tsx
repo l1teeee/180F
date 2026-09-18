@@ -9,10 +9,24 @@
 import { useState } from 'react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { ClassWeekdayBookingPoint } from '@/domain/selectors';
+import { useMessages } from '@/hooks/use-messages';
+import type { Messages } from '@/i18n/messages';
+
+// selectClassWeekdayBookings (src/domain/selectors/classes.ts, not owned by this namespace)
+// emits `day` as one of these seven fixed English codes - a matching KEY, not a sentence, since
+// the domain layer may not pick a locale (docs/02-ARCHITECTURE.md section 1). This chart is the
+// one place that code is turned into the active language's weekday abbreviation, through
+// `m.classes.weekdayShort`; every internal comparison (the highlighted bar) keeps comparing the
+// raw codes, never the translated text.
+type WeekdayCode = keyof Messages['classes']['weekdayShort'];
+
+function translateWeekday(code: string, weekdayShort: Messages['classes']['weekdayShort']): string {
+  return weekdayShort[code as WeekdayCode] ?? code;
+}
 
 export interface ClassWeekdayChartProps {
   data: ClassWeekdayBookingPoint[];
-  highlightDay: string; // today's weekday label, e.g. 'Thu' - must match one entry's `day`
+  highlightDay: string; // today's weekday CODE, e.g. 'Thu' - must match one entry's `day`, not translated
 }
 
 const CHART_HEIGHT = 240;
@@ -28,7 +42,7 @@ interface BarShapeProps {
 
 // A closure factory (not a plain component) so the shape function can close over `highlightDay`
 // without Recharts needing to know about it - Recharts calls `shape` as a plain function per bar.
-function makeBarShape(highlightDay: string) {
+function makeBarShape(highlightDay: string, chartTodayLabel: (n: number) => string) {
   return function BarShape({ x = 0, y = 0, width = 0, height = 0, payload }: BarShapeProps) {
     const isHighlight = payload?.day === highlightDay;
     const radius = Math.min(width / 2, 16);
@@ -72,7 +86,7 @@ function makeBarShape(highlightDay: string) {
               fontWeight={600}
               fill="var(--color-purple-deep)"
             >
-              {`Today · ${payload?.bookings ?? 0}`}
+              {chartTodayLabel(payload?.bookings ?? 0)}
             </text>
           </g>
         ) : null}
@@ -87,17 +101,24 @@ interface ChartTooltipProps {
   payload?: { value?: number }[];
 }
 
-function ChartTooltip({ active, label, payload }: ChartTooltipProps) {
+function ChartTooltip({
+  active,
+  label,
+  payload,
+  bookingsCount,
+  weekdayShort,
+}: ChartTooltipProps & { bookingsCount: (n: number) => string; weekdayShort: Messages['classes']['weekdayShort'] }) {
   if (!active || !payload || payload.length === 0) return null;
   return (
     <div className="rounded-card-sm bg-surface px-3 py-2 text-[13px] shadow-card">
-      <p className="text-text-secondary">{label}</p>
-      <p className="font-semibold text-ink">{payload[0]?.value ?? 0} bookings</p>
+      <p className="text-text-secondary">{label ? translateWeekday(label, weekdayShort) : ''}</p>
+      <p className="font-semibold text-ink">{bookingsCount(payload[0]?.value ?? 0)}</p>
     </div>
   );
 }
 
 export function ClassWeekdayChart({ data, highlightDay }: ClassWeekdayChartProps) {
+  const m = useMessages();
   // Motion pattern 8 "Chart draw" (docs/03 12.2/12.3): draws once on mount, never again - a
   // later data change (e.g. a booking created elsewhere while this page is open) must move the
   // bars instantly, not replay the grow-in. Recharts' own onAnimationEnd flips this off after
@@ -130,17 +151,21 @@ export function ClassWeekdayChart({ data, highlightDay }: ClassWeekdayChartProps
             <CartesianGrid horizontal vertical={false} strokeDasharray="4 4" stroke="var(--color-border-soft)" />
             <XAxis
               dataKey="day"
+              tickFormatter={(value: string) => translateWeekday(value, m.classes.weekdayShort)}
               axisLine={false}
               tickLine={false}
               tick={{ fill: 'var(--color-text-secondary)', fontSize: 12, fontWeight: 600 }}
               dy={8}
             />
             <YAxis hide domain={[0, (dataMax: number) => dataMax + 4]} />
-            <Tooltip content={<ChartTooltip />} cursor={false} />
+            <Tooltip
+              content={<ChartTooltip bookingsCount={m.classes.bookingsCount} weekdayShort={m.classes.weekdayShort} />}
+              cursor={false}
+            />
             <Bar
               dataKey="bookings"
               barSize={BAR_SIZE}
-              shape={makeBarShape(highlightDay)}
+              shape={makeBarShape(highlightDay, m.classes.chartTodayLabel)}
               isAnimationActive={isAnimationActive}
               animationDuration={400}
               onAnimationEnd={() => setIsAnimationActive(false)}
@@ -149,8 +174,14 @@ export function ClassWeekdayChart({ data, highlightDay }: ClassWeekdayChartProps
         </ResponsiveContainer>
       </div>
       <p className="sr-only">
-        Bookings by weekday, ranging from {minValue} to {maxValue}. {highlightDay} is today.{' '}
-        {data.map((point) => `${point.day}: ${point.bookings}`).join(', ')}.
+        {m.classes.weekdayBookingsSummary(
+          minValue,
+          maxValue,
+          translateWeekday(highlightDay, m.classes.weekdayShort),
+          data
+            .map((point) => m.classes.weekdayEntry(translateWeekday(point.day, m.classes.weekdayShort), point.bookings))
+            .join(', '),
+        )}
       </p>
     </div>
   );

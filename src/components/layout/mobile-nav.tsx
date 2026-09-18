@@ -5,9 +5,11 @@
 // and focus return all included) with side="left", duration overridden from the sheet's default
 // 220ms to docs/03 12.2 pattern 14 "Drawer"'s own 320ms (--duration-deliberate).
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { LogOut } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import type { NavItem } from '@/domain/constants';
+import { useMessages } from '@/hooks/use-messages';
 import { useAuth } from '@/services/auth/auth-context';
 import { useSettingsStore } from '@/stores/settings.store';
 import { NavLinks } from './nav-links';
@@ -24,6 +26,7 @@ export interface MobileNavProps {
 const FALLBACK_STUDIO_NAME = '180 Fitness Studio';
 
 export function MobileNav({ items, open, onOpenChange }: MobileNavProps) {
+  const m = useMessages();
   const { signOut } = useAuth();
   const router = useRouter();
   const studioName = useSettingsStore((state) => state.settings?.general.studioName ?? FALLBACK_STUDIO_NAME);
@@ -43,8 +46,10 @@ export function MobileNav({ items, open, onOpenChange }: MobileNavProps) {
               enough for "180 Fitness Studio" at 20px/650 - wrapping to two lines left the close
               button's fixed top-right position looking misaligned against the taller header. */}
           <SheetTitle className="flex min-w-0 items-center gap-2.5 text-left">
-            <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-chip bg-ink text-xs font-bold text-white">
-              180
+            {/* Client-supplied mark (public/brand/mark.png) - studio name stays live text
+                per ADR-019, so only the monogram is baked into an image. */}
+            <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-chip bg-ink">
+              <Image src="/brand/mark.png" alt="" width={437} height={256} className="w-[22px] h-auto" />
             </span>
             <span className="truncate">{studioName}</span>
           </SheetTitle>
@@ -61,7 +66,7 @@ export function MobileNav({ items, open, onOpenChange }: MobileNavProps) {
             className="flex h-11 w-full items-center gap-3 rounded-field px-3 text-sm font-semibold text-text-secondary transition-colors duration-[var(--duration-fast)] ease-out hover:bg-surface-muted hover:text-ink"
           >
             <LogOut aria-hidden="true" className="h-[18px] w-[18px]" />
-            Logout
+            {m.layout.logout}
           </button>
         </div>
       </SheetContent>

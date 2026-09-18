@@ -74,12 +74,6 @@ describe('selectWeeklyBookingTrend', () => {
     }
   });
 
-  it('each label matches the point date weekday short name', () => {
-    // demoToday 2026-09-17 is a Thursday
-    expect(points[6].label).toBe('Thu');
-    expect(points[5].label).toBe('Wed');
-  });
-
   it('counts only confirmed or pending bookings, excluding cancelled and waitlist (ADR-023)', () => {
     const sessionById = new Map(dataset.sessions.map((s) => [s.id, s]));
     for (const point of points) {

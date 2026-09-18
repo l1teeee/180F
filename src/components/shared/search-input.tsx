@@ -1,7 +1,11 @@
+'use client';
+
 // docs/07-COMPONENT-ARCHITECTURE.md section 4. docs/03 section 5 "Inputs": search input carries
-// a 16px leading icon and the placeholder "Search customers, classes...".
+// a 16px leading icon and a default placeholder (m.common.searchPlaceholder), overridable per call
+// site since some screens search a narrower set than "customers, classes...".
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { useMessages } from '@/hooks/use-messages';
 
 export interface SearchInputProps {
   value: string;
@@ -11,6 +15,8 @@ export interface SearchInputProps {
 }
 
 export function SearchInput({ value, onChange, placeholder, onFocus }: SearchInputProps) {
+  const m = useMessages();
+  const resolvedPlaceholder = placeholder ?? m.common.searchPlaceholder;
   return (
     <div className="relative w-full">
       <Search
@@ -23,8 +29,8 @@ export function SearchInput({ value, onChange, placeholder, onFocus }: SearchInp
         value={value}
         onChange={(event) => onChange(event.target.value)}
         onFocus={onFocus}
-        placeholder={placeholder ?? 'Search customers, classes...'}
-        aria-label={placeholder ?? 'Search customers, classes...'}
+        placeholder={resolvedPlaceholder}
+        aria-label={resolvedPlaceholder}
         className="pl-9"
       />
     </div>

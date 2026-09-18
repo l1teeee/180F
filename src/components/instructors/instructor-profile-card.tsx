@@ -8,6 +8,7 @@ import { ACCENT_FALLBACK_CLASSNAME } from '@/components/shared/accent-fallback-c
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Card } from '@/components/ui/card';
 import type { AccentToken, InstructorWithStats } from '@/domain/types';
+import { useMessages } from '@/hooks/use-messages';
 import { paletteForAccent } from '@/lib/avatar';
 import { initialsFor } from './avatar-initials';
 
@@ -17,6 +18,7 @@ export interface InstructorProfileCardProps {
 }
 
 export function InstructorProfileCard({ instructor, accent }: InstructorProfileCardProps) {
+  const m = useMessages();
   return (
     <Card className="flex h-full flex-col items-center gap-4 text-center sm:items-start sm:text-left">
       <AvatarBlobatar
@@ -33,7 +35,7 @@ export function InstructorProfileCard({ instructor, accent }: InstructorProfileC
         <p className="text-sm font-medium text-text-secondary">{instructor.specialty}</p>
       </div>
       <div className="flex items-center gap-3">
-        <StatusBadge status={instructor.status} />
+        <StatusBadge status={instructor.status} label={m.instructors.statusLabel[instructor.status]} />
         <span className="flex items-center gap-1 text-sm font-semibold text-ink tabular-nums">
           <Star aria-hidden="true" className="size-3.5 fill-yellow text-yellow" />
           {instructor.rating.toFixed(1)}

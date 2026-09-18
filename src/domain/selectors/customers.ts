@@ -115,7 +115,7 @@ export function selectCustomerActivity(
     {
       id: `${customer.id}-joined`,
       kind: 'joined',
-      label: 'Joined 180 Fitness Studio',
+      className: null,
       at: buildISODateTime(customer.joinedAt, '09:00'),
       sessionId: null,
     },
@@ -124,13 +124,13 @@ export function selectCustomerActivity(
   for (const booking of customerBookings) {
     const session = sessionById.get(booking.sessionId);
     if (!session) continue;
-    const className = classTypeById.get(session.classTypeId)?.name ?? 'class';
+    const className = classTypeById.get(session.classTypeId)?.name ?? null;
 
     if (booking.status === 'cancelled') {
       entries.push({
         id: `${booking.id}-cancelled`,
         kind: 'cancelled',
-        label: `Cancelled ${className}`,
+        className,
         // cancelledAt (invariant 7: non-null exactly when status === 'cancelled') is the fact
         // the ledger actually holds for "when this was cancelled" - createdAt is when the
         // booking was originally made, a different event (Codex M5).
@@ -145,7 +145,7 @@ export function selectCustomerActivity(
         entries.push({
           id: `${booking.id}-attended`,
           kind: 'attended',
-          label: `Attended ${className}`,
+          className,
           at: booking.checkedInAt,
           sessionId: session.id,
         });
@@ -153,7 +153,7 @@ export function selectCustomerActivity(
         entries.push({
           id: `${booking.id}-no-show`,
           kind: 'no_show',
-          label: `Missed ${className}`,
+          className,
           at: buildISODateTime(session.date, session.startTime),
           sessionId: session.id,
         });
@@ -164,7 +164,7 @@ export function selectCustomerActivity(
     entries.push({
       id: `${booking.id}-reserved`,
       kind: 'reserved',
-      label: `Reserved ${className}`,
+      className,
       at: booking.createdAt,
       sessionId: session.id,
     });

@@ -1,52 +1,37 @@
 'use client';
 
-// docs/07-COMPONENT-ARCHITECTURE.md section 3: search trigger, notifications, help, profile
-// menu. Radix Trigger primitives (Popover/DropdownMenu) render their own <button> by default,
-// so button-styled triggers below apply buttonVariants()'s className directly to that button
-// instead of nesting a separate <Button> as an asChild ref target (button.tsx is a plain
-// function component, not wrapped in forwardRef).
-import { useRouter } from 'next/navigation';
-import { HelpCircle, LogOut, Menu } from 'lucide-react';
+// docs/07-COMPONENT-ARCHITECTURE.md section 3: search trigger, notifications, help. The account
+// identity and logout used to also live here, duplicating AppSidebar's account menu (lg and up)
+// and MobileNav's Logout button (below lg) - removed so the account only ever appears once, on
+// the rail/drawer. Radix Trigger primitives (Popover/DropdownMenu) render their own <button> by
+// default, so the help Popover trigger below applies buttonVariants()'s className directly to
+// that button instead of nesting a separate <Button> as an asChild ref target (button.tsx is a
+// plain function component, not wrapped in forwardRef).
+import { HelpCircle, Menu } from 'lucide-react';
 import { buttonVariants } from '@/components/ui/button';
-import { AvatarBlobatar } from '@/components/ui/avatar';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { SearchInput } from '@/components/shared/search-input';
-import { useAuth } from '@/services/auth/auth-context';
+import { useMessages } from '@/hooks/use-messages';
 import { cn } from '@/lib/cn';
-import { ADMIN_ACCENT, ADMIN_SEED, paletteForAccent } from '@/lib/avatar';
 import { useUiStore } from '@/stores/ui.store';
-import { DemoBadge } from './demo-badge';
 import { NotificationsMenu } from './notifications-menu';
 
-export interface TopBarProps {
-  user: { name: string; role: string };
-}
-
-export function TopBar({ user }: TopBarProps) {
+export function TopBar() {
+  const m = useMessages();
   const setSidebarOpen = useUiStore((state) => state.setSidebarOpen);
   const setSearchOpen = useUiStore((state) => state.setSearchOpen);
-  const { signOut } = useAuth();
-  const router = useRouter();
-
-  async function handleLogout() {
-    await signOut();
-    router.replace('/login');
-  }
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-surface/90 px-4 backdrop-blur-sm sm:px-6 lg:px-7">
+    // AppShell lays this header out as a flex item alongside a flex-1 (flex: 1 1 0%) <main> in a
+    // scrolling column. Flex-shrink is distributed in proportion to each item's flex-basis, and
+    // main's basis is 0, so main absorbs none of the shrinkage and the header absorbs all of it,
+    // collapsing to its own content height (40.8px, not h-16's 64px) whenever content overflows.
+    // shrink-0 opts the header out of that distribution entirely.
+    <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-3 border-b border-border bg-surface/90 px-4 backdrop-blur-sm sm:px-6 lg:px-7">
       <button
         type="button"
         onClick={() => setSidebarOpen(true)}
-        aria-label="Open menu"
+        aria-label={m.layout.openMenu}
         className={cn(buttonVariants({ variant: 'icon' }), 'lg:hidden')}
       >
         <Menu aria-hidden="true" className="h-[18px] w-[18px]" />
@@ -58,7 +43,7 @@ export function TopBar({ user }: TopBarProps) {
             value=""
             onChange={() => setSearchOpen(true)}
             onFocus={() => setSearchOpen(true)}
-            placeholder="Search customers, classes..."
+            placeholder={m.common.searchPlaceholder}
           />
           {/* text-secondary, not text-tertiary: text-tertiary measures 2.52:1 on white, well
               under the 4.5:1 AA floor for text people must read (docs/03 section 10 restricts
@@ -73,64 +58,17 @@ export function TopBar({ user }: TopBarProps) {
       </div>
 
       <div className="ml-auto flex shrink-0 items-center gap-2">
-        <DemoBadge className="hidden md:inline-flex" />
         <NotificationsMenu />
 
         <Popover>
-          <PopoverTrigger className={buttonVariants({ variant: 'icon' })} aria-label="Help">
+          <PopoverTrigger className={buttonVariants({ variant: 'icon' })} aria-label={m.layout.help}>
             <HelpCircle aria-hidden="true" className="h-[18px] w-[18px]" />
           </PopoverTrigger>
           <PopoverContent align="end" className="w-72">
-            <p className="text-sm font-semibold text-ink">Need a hand?</p>
-            <p className="mt-1 text-sm text-text-secondary">
-              This is a demo workspace - every screen uses simulated data, so feel free to explore. Nothing
-              here is sent anywhere real.
-            </p>
+            <p className="text-sm font-semibold text-ink">{m.layout.helpTitle}</p>
+            <p className="mt-1 text-sm text-text-secondary">{m.layout.helpDescription}</p>
           </PopoverContent>
         </Popover>
-
-        <DropdownMenu>
-          {/* aria-label includes the visible name: an aria-label that fully replaces visible
-              text content fails WCAG 2.5.3 Label in Name when the two don't overlap (Lighthouse
-              flagged "Account menu" against the visible user.name span below). */}
-          <DropdownMenuTrigger
-            className="flex h-10 items-center gap-2.5 rounded-pill border border-border bg-surface pr-3 pl-1 text-sm font-semibold text-ink transition-colors duration-[var(--duration-fast)] ease-out hover:bg-surface-muted"
-            aria-label={`Account menu, ${user.name}`}
-          >
-            {/*
-             * docs/03 section 13 "Avatars" / ADR-021: the signed-in administrator's blobatar,
-             * replacing the generic person icon - 40px, docs/03 section 13's own size for "the
-             * top bar and cards". animate="hover" is one of the two permitted spots (docs/03
-             * section 13 "Motion") - exactly one instance renders here.
-             */}
-            <AvatarBlobatar
-              seed={ADMIN_SEED}
-              palette={paletteForAccent(ADMIN_ACCENT)}
-              size={40}
-              alt=""
-              animate="hover"
-              fallbackInitials="A"
-              fallbackClassName="bg-purple-xsoft"
-            />
-            <span className="hidden sm:inline">{user.name}</span>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-52">
-            {/* DropdownMenuLabel defaults to an uppercase, letter-spaced section-heading style
-                (matching e.g. the search palette's group headings) - reset here since this one
-                shows the account's actual name/role, not a section label. */}
-            <DropdownMenuLabel className="normal-case tracking-normal">
-              <span className="flex flex-col gap-0.5 font-normal">
-                <span className="text-sm font-semibold text-ink">{user.name}</span>
-                <span className="text-xs text-text-secondary">{user.role}</span>
-              </span>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive" onSelect={handleLogout}>
-              <LogOut aria-hidden="true" />
-              Logout
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
     </header>
   );

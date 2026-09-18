@@ -7,6 +7,7 @@ import { cn } from "@/lib/cn"
 import type { ClassType } from "@/domain/types"
 import type { PublicClassOption } from "@/hooks/use-public-booking-catalog"
 import { ACCENT_ICON_BG_CLASS, ClassIcon } from "@/components/shared/class-icon"
+import { useMessages } from "@/hooks/use-messages"
 
 // Master plan section 35: card content is icon, duration, short description, available
 // sessions - one native <button> per card (not a div+onClick) so the whole 40px+ target is
@@ -20,13 +21,14 @@ export function ClassStep({
   selectedClassId: string | null
   onSelect: (classType: ClassType) => void
 }) {
+  const m = useMessages()
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-1.5">
         <h1 tabIndex={-1} className="text-[22px] font-bold tracking-tight text-ink outline-none">
-          Choose your class
+          {m.publicBooking.classStep.heading}
         </h1>
-        <p className="text-sm text-text-secondary">Pick a class to see its upcoming times.</p>
+        <p className="text-sm text-text-secondary">{m.publicBooking.classStep.subtitle}</p>
       </div>
       <div className="flex flex-col gap-3">
         {options.map((option, index) => {
@@ -61,11 +63,11 @@ export function ClassStep({
                 <span className="text-[15px] font-semibold text-ink">{option.classType.name}</span>
                 <span className="truncate text-sm text-text-secondary">{option.classType.description}</span>
                 <span className="text-xs font-semibold text-text-secondary">
-                  {option.classType.durationMinutes} min
+                  {m.publicBooking.classStep.durationMinutes(option.classType.durationMinutes)}
                   {" · "}
                   {isDisabled
-                    ? "No sessions available"
-                    : `${option.availableSessionCount} session${option.availableSessionCount === 1 ? "" : "s"} available`}
+                    ? m.publicBooking.classStep.noSessionsAvailable
+                    : m.publicBooking.classStep.sessionsAvailable(option.availableSessionCount)}
                 </span>
               </div>
               {isSelected && (

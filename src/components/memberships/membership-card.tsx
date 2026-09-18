@@ -7,6 +7,7 @@ import { CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import type { AccentToken, MembershipPlan } from '@/domain/types';
+import { useMessages } from '@/hooks/use-messages';
 import { formatCurrency } from '@/lib/format';
 
 export interface MembershipCardProps {
@@ -28,12 +29,13 @@ const ACCENT_ICON_CLASSNAME: Record<AccentToken, string> = {
   blue: 'bg-blue-soft text-blue-text',
 };
 
-function formatPlanPrice(plan: MembershipPlan): string {
+function formatPlanPrice(plan: MembershipPlan, pricePerMonthSuffix: string): string {
   const price = formatCurrency(plan.monthlyPrice);
-  return plan.billingPeriod === 'monthly' ? `${price}/month` : price;
+  return plan.billingPeriod === 'monthly' ? `${price}${pricePerMonthSuffix}` : price;
 }
 
 export function MembershipCard({ plan, memberCount, onEdit, onViewMembers }: MembershipCardProps) {
+  const m = useMessages();
   return (
     <Card className="flex flex-col gap-5">
       <span
@@ -46,21 +48,22 @@ export function MembershipCard({ plan, memberCount, onEdit, onViewMembers }: Mem
       <div className="flex flex-col gap-1">
         <span className="text-[15px] font-semibold text-ink">{plan.name}</span>
         <span className="text-[32px] leading-none font-bold tracking-[-0.02em] text-ink tabular-nums">
-          {formatPlanPrice(plan)}
+          {formatPlanPrice(plan, m.memberships.pricePerMonthSuffix)}
         </span>
       </div>
 
       <ul className="flex flex-1 flex-col gap-2">
         {plan.benefits.map((benefit) => (
           <li key={benefit} className="text-sm text-text-secondary">
-            {benefit}
+            {/* Fallback deliberate: a plan edited through PlanEditDialog stores literal text
+                (see that file's own comment), which is not a key in benefitLabel and must render
+                verbatim rather than disappear. */}
+            {m.memberships.benefitLabel[benefit as keyof typeof m.memberships.benefitLabel] ?? benefit}
           </li>
         ))}
       </ul>
 
-      <p className="text-sm font-medium text-text-secondary tabular-nums">
-        {memberCount} {memberCount === 1 ? 'member' : 'members'}
-      </p>
+      <p className="text-sm font-medium text-text-secondary tabular-nums">{m.memberships.memberCount(memberCount)}</p>
 
       <div className="flex items-center gap-2.5 border-t border-border pt-5">
         {/* Four cards each carry a same-named "Edit plan" / "View members" pair - aria-label
@@ -70,19 +73,19 @@ export function MembershipCard({ plan, memberCount, onEdit, onViewMembers }: Mem
           type="button"
           variant="secondary"
           className="flex-1"
-          aria-label={`Edit ${plan.name} plan`}
+          aria-label={m.memberships.card.editPlanAria(plan.name)}
           onClick={onEdit}
         >
-          Edit plan
+          {m.memberships.card.editPlan}
         </Button>
         <Button
           type="button"
           variant="ghost"
           className="flex-1"
-          aria-label={`View ${plan.name} members`}
+          aria-label={m.memberships.card.viewMembersAria(plan.name)}
           onClick={onViewMembers}
         >
-          View members
+          {m.memberships.card.viewMembers}
         </Button>
       </div>
     </Card>

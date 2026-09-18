@@ -11,6 +11,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, type UseFormReturn } from 'react-hook-form';
 import { publicBookingInputSchema, type PublicBookingInputSchema } from '@/domain/schemas';
+import type { BookingRejectionReason } from '@/domain/selectors';
 import type { Booking, ClassType, ISODate, SessionWithOccupancy } from '@/domain/types';
 import { useBookingStore } from '@/stores/booking.store';
 import { useCatalogStore } from '@/stores/catalog.store';
@@ -47,8 +48,7 @@ export interface UsePublicBookingWizardResult {
   selection: WizardSelection;
   form: UseFormReturn<PublicBookingInputSchema>;
   mutation: 'idle' | 'pending';
-  submitError: string | null;
-  isSessionFullError: boolean;
+  submitErrorReason: BookingRejectionReason | null;
   confirmedBooking: Booking | null;
   confirmedSelection: ConfirmedSelection | null;
   selectClass: (classType: ClassType) => void;
@@ -87,12 +87,7 @@ export function usePublicBookingWizard(initialClassId: string | null): UsePublic
   const mutation = useBookingStore((state) => state.mutation);
 
   const [selection, setSelection] = useState<WizardSelection>({ classType: null, date: null, session: null });
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  // Tracked separately from `submitError`'s message: `selection.session` is a snapshot taken
-  // at step 3 (docs/06 section 3.15, see WizardSelection above), so it does not live-update
-  // when a later submit finds the session has since filled up - re-deriving "was this a
-  // session_full rejection" from that stale snapshot's occupancyState would silently miss it.
-  const [isSessionFullError, setIsSessionFullError] = useState(false);
+  const [submitErrorReason, setSubmitErrorReason] = useState<BookingRejectionReason | null>(null);
   const [confirmedBooking, setConfirmedBooking] = useState<Booking | null>(null);
   const [confirmedSelection, setConfirmedSelection] = useState<ConfirmedSelection | null>(null);
   const [didInitPreselect, setDidInitPreselect] = useState(false);
@@ -164,8 +159,7 @@ export function usePublicBookingWizard(initialClassId: string | null): UsePublic
     (classType: ClassType) => {
       if (isSubmittingRef.current) return; // selection is locked while a submission is in flight
       setSelection({ classType, date: null, session: null });
-      setSubmitError(null);
-      setIsSessionFullError(false);
+      setSubmitErrorReason(null);
       goToStep(2);
     },
     [goToStep],
@@ -175,8 +169,7 @@ export function usePublicBookingWizard(initialClassId: string | null): UsePublic
     (date: ISODate) => {
       if (isSubmittingRef.current) return;
       setSelection((prev) => ({ ...prev, date, session: null }));
-      setSubmitError(null);
-      setIsSessionFullError(false);
+      setSubmitErrorReason(null);
       goToStep(3);
     },
     [goToStep],
@@ -186,8 +179,7 @@ export function usePublicBookingWizard(initialClassId: string | null): UsePublic
     (session: SessionWithOccupancy) => {
       if (isSubmittingRef.current) return;
       setSelection((prev) => ({ ...prev, session }));
-      setSubmitError(null);
-      setIsSessionFullError(false);
+      setSubmitErrorReason(null);
       goToStep(4);
     },
     [goToStep],
@@ -203,15 +195,13 @@ export function usePublicBookingWizard(initialClassId: string | null): UsePublic
   const chooseAnotherTime = useCallback(() => {
     if (isSubmittingRef.current) return;
     setSelection((prev) => ({ ...prev, session: null }));
-    setSubmitError(null);
-    setIsSessionFullError(false);
+    setSubmitErrorReason(null);
     goToStep(3);
   }, [goToStep]);
 
   const startOver = useCallback(() => {
     setSelection({ classType: null, date: null, session: null });
-    setSubmitError(null);
-    setIsSessionFullError(false);
+    setSubmitErrorReason(null);
     setConfirmedBooking(null);
     setConfirmedSelection(null);
     form.reset(EMPTY_FORM_VALUES);
@@ -229,8 +219,7 @@ export function usePublicBookingWizard(initialClassId: string | null): UsePublic
       const { classType, session } = selection;
       if (!classType || !session) return; // CustomerStep only mounts, and so can only submit, once both are set
       isSubmittingRef.current = true;
-      setSubmitError(null);
-      setIsSessionFullError(false);
+      setSubmitErrorReason(null);
       try {
         const result = await useBookingStore.getState().createPublicBooking(values);
         if (result.ok) {
@@ -243,8 +232,7 @@ export function usePublicBookingWizard(initialClassId: string | null): UsePublic
           setConfirmedSelection({ classType, session });
           goToStep(5);
         } else {
-          setSubmitError(result.message);
-          setIsSessionFullError(result.reason === 'session_full');
+          setSubmitErrorReason(result.reason);
         }
       } finally {
         isSubmittingRef.current = false;
@@ -258,8 +246,7 @@ export function usePublicBookingWizard(initialClassId: string | null): UsePublic
     selection,
     form,
     mutation,
-    submitError,
-    isSessionFullError,
+    submitErrorReason,
     confirmedBooking,
     confirmedSelection,
     selectClass,

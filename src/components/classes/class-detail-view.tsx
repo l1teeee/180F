@@ -15,6 +15,7 @@ import { LoadingSkeleton } from '@/components/shared/loading-skeleton';
 import { SectionCard } from '@/components/shared/section-card';
 import { StatCard } from '@/components/shared/stat-card';
 import { useClassDetail } from '@/hooks/use-class-detail';
+import { useMessages } from '@/hooks/use-messages';
 import { useDemoRuntimeStore } from '@/stores/demo-runtime.store';
 
 // ADR-012: every Recharts chart loads through next/dynamic with ssr:false. The leaf chart
@@ -40,11 +41,12 @@ function ClassDetailSkeleton() {
 }
 
 export function ClassDetailView({ classTypeId }: { classTypeId: string }) {
+  const m = useMessages();
   const status = useDemoRuntimeStore((state) => state.status);
   const retryHydration = useDemoRuntimeStore((state) => state.retryHydration);
   const detail = useClassDetail(classTypeId);
 
-  if (status === 'error') return <ErrorState onRetry={retryHydration} />;
+  if (status === 'error') return <ErrorState title={m.classes.errorTitle} onRetry={retryHydration} />;
   if (status !== 'ready') return <ClassDetailSkeleton />;
   if (!detail) notFound();
 
@@ -55,22 +57,32 @@ export function ClassDetailView({ classTypeId }: { classTypeId: string }) {
         className="inline-flex w-fit items-center gap-1.5 text-sm font-semibold text-text-secondary hover:text-ink"
       >
         <ArrowLeft aria-hidden="true" className="size-4" />
-        Classes
+        {m.classes.backToClasses}
       </Link>
 
       <ClassDetail classType={detail.classType} instructors={detail.instructors} />
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
-        <StatCard label="Average occupancy" value={toPercentValue(detail.classType.averageOccupancy)} unit="%" accent="purple" />
-        <StatCard label="Bookings this month" value={detail.classType.bookingsThisMonth} accent="green" />
-        <StatCard label="Cancellation rate" value={toPercentValue(detail.classType.cancellationRate)} unit="%" accent="pink" />
+        <StatCard
+          label={m.classes.stats.averageOccupancy}
+          value={toPercentValue(detail.classType.averageOccupancy)}
+          unit="%"
+          accent="purple"
+        />
+        <StatCard label={m.classes.stats.bookingsThisMonth} value={detail.classType.bookingsThisMonth} accent="green" />
+        <StatCard
+          label={m.classes.stats.cancellationRate}
+          value={toPercentValue(detail.classType.cancellationRate)}
+          unit="%"
+          accent="pink"
+        />
       </div>
 
-      <SectionCard title="Bookings by weekday">
+      <SectionCard title={m.classes.sections.bookingsByWeekday}>
         <ClassWeekdayChart data={detail.weekdayBookings} highlightDay={detail.highlightDay} />
       </SectionCard>
 
-      <SectionCard title="Weekly schedule">
+      <SectionCard title={m.classes.sections.weeklySchedule}>
         <ClassScheduleList sessions={detail.sessions} />
       </SectionCard>
     </div>

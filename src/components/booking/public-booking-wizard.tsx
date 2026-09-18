@@ -8,7 +8,8 @@ import { useDemoStatus } from "@/hooks/use-demo-status"
 import { usePublicBookingCatalog } from "@/hooks/use-public-booking-catalog"
 import { usePublicBookingSessions } from "@/hooks/use-public-booking-sessions"
 import { usePublicBookingWizard } from "@/hooks/use-public-booking-wizard"
-import { formatDisplayDate } from "@/lib/dates"
+import { useDateLocale } from "@/hooks/use-date-locale"
+import { useMessages } from "@/hooks/use-messages"
 import { useDemoRuntimeStore } from "@/stores/demo-runtime.store"
 import { BookingSuccess } from "./booking-success"
 import { ClassStep } from "./class-step"
@@ -21,6 +22,8 @@ import { WizardProgress } from "./wizard-progress"
 // one of the use-public-booking-* hooks (which each call a domain selector); this component
 // only routes between steps and never computes a count itself.
 export function PublicBookingWizard({ initialClassId }: { initialClassId: string | null }) {
+  const m = useMessages()
+  const { formatDisplayDate } = useDateLocale()
   const status = useDemoStatus()
   const hydrationError = useDemoRuntimeStore((state) => state.error)
   const wizard = usePublicBookingWizard(initialClassId)
@@ -55,7 +58,7 @@ export function PublicBookingWizard({ initialClassId }: { initialClassId: string
       <div ref={stepRegionRef}>
         {status === "error" ? (
           <ErrorState
-            description={hydrationError ?? "We couldn't load class availability."}
+            description={hydrationError ?? m.publicBooking.loadError}
             onRetry={() => void useDemoRuntimeStore.getState().retryHydration()}
           />
         ) : status !== "ready" ? (
@@ -82,8 +85,7 @@ export function PublicBookingWizard({ initialClassId }: { initialClassId: string
             session={wizard.selection.session}
             form={wizard.form}
             mutation={wizard.mutation}
-            submitError={wizard.submitError}
-            isSessionFullError={wizard.isSessionFullError}
+            submitErrorReason={wizard.submitErrorReason}
             onSubmit={wizard.submitCustomerDetails}
             onBack={wizard.goBack}
             onChooseAnotherTime={wizard.chooseAnotherTime}

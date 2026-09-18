@@ -16,14 +16,10 @@ import { Dumbbell, GraduationCap, Users, type LucideIcon } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { useGlobalSearch } from '@/hooks/use-global-search';
+import { useMessages } from '@/hooks/use-messages';
 import type { SearchResult } from '@/domain/types';
 import { useUiStore } from '@/stores/ui.store';
 
-const GROUP_LABEL: Record<SearchResult['kind'], string> = {
-  customer: 'Customers',
-  class: 'Classes',
-  instructor: 'Instructors',
-};
 const GROUP_ICON: Record<SearchResult['kind'], LucideIcon> = {
   customer: Users,
   class: Dumbbell,
@@ -32,6 +28,7 @@ const GROUP_ICON: Record<SearchResult['kind'], LucideIcon> = {
 const GROUP_ORDER: SearchResult['kind'][] = ['customer', 'class', 'instructor'];
 
 export function GlobalSearch() {
+  const m = useMessages();
   const open = useUiStore((state) => state.searchOpen);
   const setOpen = useUiStore((state) => state.setSearchOpen);
   const [query, setQuery] = useState('');
@@ -69,27 +66,27 @@ export function GlobalSearch() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogHeader className="sr-only">
-        <DialogTitle>Search</DialogTitle>
-        <DialogDescription>Search customers, classes and instructors</DialogDescription>
+        <DialogTitle>{m.layout.searchTitle}</DialogTitle>
+        <DialogDescription>{m.layout.searchDescription}</DialogDescription>
       </DialogHeader>
       <DialogContent size="palette" position="top" showCloseButton={false} className="overflow-hidden p-0">
         <Command
           shouldFilter={false}
           className="[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-2 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:tracking-[0.04em] [&_[cmdk-group-heading]]:text-text-secondary [&_[cmdk-group-heading]]:uppercase"
         >
-          <CommandInput value={query} onValueChange={setQuery} placeholder="Search customers, classes..." />
+          <CommandInput value={query} onValueChange={setQuery} placeholder={m.common.searchPlaceholder} />
           <CommandList>
             {trimmed === '' ? (
-              <CommandEmpty>Start typing to search customers, classes and instructors.</CommandEmpty>
+              <CommandEmpty>{m.layout.searchEmptyPrompt}</CommandEmpty>
             ) : results.length === 0 ? (
-              <CommandEmpty>No results for &quot;{trimmed}&quot;</CommandEmpty>
+              <CommandEmpty>{m.layout.searchNoResults(trimmed)}</CommandEmpty>
             ) : (
               GROUP_ORDER.map((kind) => {
                 const groupResults = results.filter((result) => result.kind === kind);
                 if (groupResults.length === 0) return null;
                 const Icon = GROUP_ICON[kind];
                 return (
-                  <CommandGroup key={kind} heading={GROUP_LABEL[kind]}>
+                  <CommandGroup key={kind} heading={m.layout.searchGroupLabels[kind]}>
                     {groupResults.map((result) => (
                       <CommandItem
                         key={`${result.kind}-${result.id}`}

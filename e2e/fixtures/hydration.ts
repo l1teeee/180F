@@ -22,6 +22,21 @@
 // on a missing signal, never silently race a skeleton.
 import { test as base, expect, type Page } from '@playwright/test';
 
+// i18n phase 1 (CLAUDE.md, docs/13-DECISIONS.md): Spanish is now the app's runtime default, but
+// this suite locates elements by their English accessible names on purpose - it asserts the
+// English copy the master plan (an English document) describes, so the specs stay readable.
+// Seeding this key before any app script runs pins every spec to English regardless of the
+// runtime default; it does not mean English is the default - see LOCALE_STORAGE_KEY's own
+// header comment in stores/locale.store.ts for that.
+export const E2E_LOCALE_STORAGE_KEY = '180f.ui.locale';
+
+/** Seeds the English locale into localStorage before the app's first script runs. */
+export async function seedEnglishLocale(page: Page): Promise<void> {
+  await page.addInitScript((key: string) => {
+    window.localStorage.setItem(key, 'en');
+  }, E2E_LOCALE_STORAGE_KEY);
+}
+
 export const DEMO_STATUS_ATTRIBUTE = 'data-demo-status';
 export const DEMO_STATUS_READY = 'ready';
 const READY_SELECTOR = `body[${DEMO_STATUS_ATTRIBUTE}="${DEMO_STATUS_READY}"]`;
@@ -63,6 +78,7 @@ export const test = base.extend<object>({
   // unrelated to React — renaming sidesteps the false positive without touching eslint config
   // (out of this harness's write set) or disabling the rule.
   page: async ({ page }, provide) => {
+    await seedEnglishLocale(page);
     await provide(withHydrationAwareGoto(page));
   },
 });

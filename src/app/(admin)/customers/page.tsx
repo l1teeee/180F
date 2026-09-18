@@ -18,6 +18,7 @@ import { useCustomersKpis } from '@/hooks/use-customers-kpis';
 import { useCustomersMembershipPlans } from '@/hooks/use-customers-membership-plans';
 import { useCustomersRows } from '@/hooks/use-customers-rows';
 import { useDemoStatus } from '@/hooks/use-demo-status';
+import { useMessages } from '@/hooks/use-messages';
 import { useDemoRuntimeStore } from '@/stores/demo-runtime.store';
 
 const INITIAL_FILTERS: CustomerFilters = { query: '', status: 'all', membershipId: 'all' };
@@ -29,6 +30,7 @@ const INITIAL_FILTERS: CustomerFilters = { query: '', status: 'all', membershipI
 // default export below (same pattern as src/app/book/page.tsx around its wizard's `?step=`).
 function CustomersPageContent() {
   const searchParams = useSearchParams();
+  const m = useMessages();
   const status = useDemoStatus();
   // Direct store reads for `error`/retry (not routed through a src/hooks binding) match the
   // existing precedent in src/components/booking/booking-error-state.tsx for this exact
@@ -45,7 +47,7 @@ function CustomersPageContent() {
   if (status === 'error') {
     return (
       <div className="flex flex-col gap-6">
-        <PageHeader title="Customers" subtitle="Membership roster, activity and status." />
+        <PageHeader title={m.customers.page.title} subtitle={m.customers.page.subtitle} />
         <ErrorState description={error ?? undefined} onRetry={() => void useDemoRuntimeStore.getState().retryHydration()} />
       </div>
     );
@@ -53,22 +55,28 @@ function CustomersPageContent() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Customers" subtitle="Membership roster, activity and status." />
+      <PageHeader title={m.customers.page.title} subtitle={m.customers.page.subtitle} />
 
       {/* docs/06-ROUTES-AND-SCREENS.md section 3.5 responsive table: 2x2 AT the 1024px row, not
           4-across - Tailwind's `lg` breakpoint is a 1024px min-width, so escalating there would
           already show 4-across exactly at 1024px. `xl` (1280px) is the first tier inside the
           1440px "primary" width the four-across layout is specified for. */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Total customers" value={kpis?.totalCustomers ?? 0} icon={Users} accent="purple" loading={!kpis} />
-        <StatCard label="Active memberships" value={kpis?.activeMemberships ?? 0} icon={CreditCard} accent="green" loading={!kpis} />
-        <StatCard label="New this month" value={kpis?.newThisMonth ?? 0} icon={UserPlus} accent="yellow" loading={!kpis} />
-        <StatCard label="Inactive" value={kpis?.inactive ?? 0} icon={UserX} accent="blue" loading={!kpis} />
+        <StatCard label={m.customers.kpis.totalCustomers} value={kpis?.totalCustomers ?? 0} icon={Users} accent="purple" loading={!kpis} />
+        <StatCard
+          label={m.customers.kpis.activeMemberships}
+          value={kpis?.activeMemberships ?? 0}
+          icon={CreditCard}
+          accent="green"
+          loading={!kpis}
+        />
+        <StatCard label={m.customers.kpis.newThisMonth} value={kpis?.newThisMonth ?? 0} icon={UserPlus} accent="yellow" loading={!kpis} />
+        <StatCard label={m.customers.kpis.inactive} value={kpis?.inactive ?? 0} icon={UserX} accent="blue" loading={!kpis} />
       </div>
 
       <CustomersFilterBar filters={filters} onFiltersChange={setFilters} membershipPlans={membershipPlans} />
 
-      <SectionCard title="All customers">
+      <SectionCard title={m.customers.table.sectionTitle}>
         {status !== 'ready' ? <LoadingSkeleton variant="table-row" count={6} /> : <CustomersTable rows={rows} />}
       </SectionCard>
     </div>
@@ -76,9 +84,10 @@ function CustomersPageContent() {
 }
 
 function CustomersPageFallback() {
+  const m = useMessages();
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Customers" subtitle="Membership roster, activity and status." />
+      <PageHeader title={m.customers.page.title} subtitle={m.customers.page.subtitle} />
       <LoadingSkeleton variant="kpi" count={4} className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4" />
     </div>
   );

@@ -109,7 +109,7 @@ export function lastNISODates(date: ISODate, n: number): ISODate[] {
 // this same Date's LOCAL components right back via date-fns `format()` - construct and read
 // are a symmetric pair, so whatever the host timezone is cancels out. Never reuse this Date for
 // arithmetic, storage, or comparison - only for an immediate, one-shot display label.
-function toLocalDisplayDate(date: ISODate): Date {
+export function toLocalDisplayDate(date: ISODate): Date {
   const { year, month, day } = parseISODateParts(date);
   return new Date(year, month - 1, day);
 }

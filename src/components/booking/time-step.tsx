@@ -8,7 +8,8 @@ import { EmptyState } from "@/components/shared/empty-state"
 import { cn } from "@/lib/cn"
 import { OCCUPANCY_STATE_STYLE } from "@/domain/constants"
 import type { SessionWithOccupancy } from "@/domain/types"
-import { formatDisplayTime } from "@/lib/dates"
+import { useDateLocale } from "@/hooks/use-date-locale"
+import { useMessages } from "@/hooks/use-messages"
 import { ACCENT_BADGE_VARIANT } from "./accent-styles"
 
 // Master plan section 37's literal pattern: "6:00 AM  12 / 15 spots" / "6:00 PM  FULL". A full
@@ -26,6 +27,8 @@ export function TimeStep({
   onSelect: (session: SessionWithOccupancy) => void
   onBack: () => void
 }) {
+  const m = useMessages()
+  const { formatDisplayTime } = useDateLocale()
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-1.5">
@@ -35,19 +38,19 @@ export function TimeStep({
           className="relative flex w-fit items-center gap-1 text-sm font-semibold text-text-secondary transition-colors duration-[var(--duration-base)] ease-out before:absolute before:-inset-x-2 before:-inset-y-3 before:content-[''] hover:text-ink"
         >
           <ChevronLeft className="size-4" aria-hidden="true" />
-          Change date
+          {m.publicBooking.backToDate}
         </button>
         <h1 tabIndex={-1} className="text-[22px] font-bold tracking-tight text-ink outline-none">
-          Choose a time
+          {m.publicBooking.timeStep.heading}
         </h1>
         <p className="text-sm text-text-secondary">{dateLabel}</p>
       </div>
       {sessions.length === 0 ? (
         <EmptyState
           icon={CalendarX2}
-          title="No sessions available for this day"
-          description="Every session on this day has already started, or none has been scheduled yet. Pick another date."
-          action={{ label: "Choose another date", onClick: onBack }}
+          title={m.publicBooking.timeStep.emptyState.title}
+          description={m.publicBooking.timeStep.emptyState.description}
+          action={{ label: m.publicBooking.timeStep.emptyState.action, onClick: onBack }}
         />
       ) : (
         <div className="flex flex-col gap-2.5">
@@ -76,7 +79,7 @@ export function TimeStep({
                 <span className="flex items-center gap-2">
                   {isAlmostFull && (
                     <Badge variant={ACCENT_BADGE_VARIANT[OCCUPANCY_STATE_STYLE.almost_full.accent]}>
-                      {OCCUPANCY_STATE_STYLE.almost_full.label}
+                      {m.publicBooking.occupancyStateLabel.almost_full}
                     </Badge>
                   )}
                   <span
@@ -85,7 +88,7 @@ export function TimeStep({
                       isFull ? "text-danger-text" : "text-text-secondary",
                     )}
                   >
-                    {isFull ? "FULL" : `${session.booked} / ${session.capacity} spots`}
+                    {isFull ? m.publicBooking.timeStep.full : m.publicBooking.timeStep.spotsLeft(session.booked, session.capacity)}
                   </span>
                 </span>
               </button>

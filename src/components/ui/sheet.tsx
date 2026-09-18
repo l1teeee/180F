@@ -5,6 +5,7 @@ import { Dialog as SheetPrimitive } from "radix-ui"
 import { X } from "lucide-react"
 
 import { cn } from "@/lib/cn"
+import { useMessages } from "@/hooks/use-messages"
 
 function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />
@@ -60,6 +61,7 @@ function SheetContent({
   side?: "top" | "right" | "bottom" | "left"
   showCloseButton?: boolean
 }) {
+  const m = useMessages()
   return (
     <SheetPortal>
       <SheetOverlay />
@@ -77,7 +79,7 @@ function SheetContent({
         {showCloseButton && (
           <SheetPrimitive.Close
             data-slot="sheet-close"
-            aria-label="Close"
+            aria-label={m.common.close}
             className="absolute top-3 right-3 flex h-10 w-10 items-center justify-center rounded-pill text-text-secondary transition-colors duration-[var(--duration-base)] ease-out hover:bg-surface-muted"
           >
             <X aria-hidden="true" className="h-[18px] w-[18px]" />

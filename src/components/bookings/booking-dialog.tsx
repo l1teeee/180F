@@ -17,7 +17,8 @@ import { OccupancyBar } from '@/components/shared/occupancy-bar';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { newBookingInputSchema, type NewBookingInputSchema } from '@/domain/schemas';
 import { useBookingsSessionOptions } from '@/hooks/use-bookings-session-options';
-import { formatDisplayDate, formatDisplayTime } from '@/lib/dates';
+import { useDateLocale } from '@/hooks/use-date-locale';
+import { useMessages } from '@/hooks/use-messages';
 import { useBookingStore } from '@/stores/booking.store';
 import { useCatalogStore } from '@/stores/catalog.store';
 import { useCustomerStore } from '@/stores/customer.store';
@@ -31,6 +32,8 @@ export interface BookingDialogProps {
 const EMPTY_VALUES: NewBookingInputSchema = { customerId: '', sessionId: '', source: 'reception', status: undefined };
 
 export function BookingDialog({ open, onOpenChange }: BookingDialogProps) {
+  const m = useMessages();
+  const { formatDisplayDate, formatDisplayTime } = useDateLocale();
   const idPrefix = useId();
   const customers = useCustomerStore((state) => state.customers);
   const classTypes = useCatalogStore((state) => state.classTypes);
@@ -108,10 +111,10 @@ export function BookingDialog({ open, onOpenChange }: BookingDialogProps) {
       status: isFull ? 'waitlist' : 'confirmed',
     });
     if (result.ok) {
-      toast.success('Booking created successfully');
+      toast.success(m.bookings.toastCreated);
       handleOpenChange(false);
     } else {
-      setSubmitError(result.message);
+      setSubmitError(m.bookings.promotionRejectionReason(result.reason));
     }
   }
 
@@ -119,8 +122,8 @@ export function BookingDialog({ open, onOpenChange }: BookingDialogProps) {
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent size="md">
         <DialogHeader>
-          <DialogTitle>New booking</DialogTitle>
-          <DialogDescription>Reserve a spot for a customer in an upcoming class.</DialogDescription>
+          <DialogTitle>{m.bookings.dialog.title}</DialogTitle>
+          <DialogDescription>{m.bookings.dialog.description}</DialogDescription>
         </DialogHeader>
 
         {/* DialogContent is a fixed-height flex column capped at 85vh with overflow-hidden
@@ -132,14 +135,14 @@ export function BookingDialog({ open, onOpenChange }: BookingDialogProps) {
           <div className="flex flex-col gap-5 overflow-y-auto px-0.5 py-0.5">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field data-invalid={!!errors.customerId}>
-                <FieldLabel htmlFor={`${idPrefix}-customer`}>Customer</FieldLabel>
+                <FieldLabel htmlFor={`${idPrefix}-customer`}>{m.bookings.dialog.customerLabel}</FieldLabel>
                 <Controller
                   control={control}
                   name="customerId"
                   render={({ field }) => (
                     <Select value={field.value} onValueChange={field.onChange}>
                       <SelectTrigger id={`${idPrefix}-customer`} autoFocus aria-invalid={!!errors.customerId} className="w-full">
-                        <SelectValue placeholder="Select a customer" />
+                        <SelectValue placeholder={m.bookings.dialog.selectCustomer} />
                       </SelectTrigger>
                       <SelectContent>
                         {sortedCustomers.map((customer) => (
@@ -155,7 +158,7 @@ export function BookingDialog({ open, onOpenChange }: BookingDialogProps) {
               </Field>
 
               <Field>
-                <FieldLabel htmlFor={`${idPrefix}-class`}>Class</FieldLabel>
+                <FieldLabel htmlFor={`${idPrefix}-class`}>{m.bookings.dialog.classLabel}</FieldLabel>
                 <Select
                   // '' (never undefined) so this stays a controlled Radix Select across the
                   // reset - Radix.Select treats a value prop of undefined as "uncontrolled" and
@@ -168,7 +171,7 @@ export function BookingDialog({ open, onOpenChange }: BookingDialogProps) {
                   }}
                 >
                   <SelectTrigger id={`${idPrefix}-class`} className="w-full">
-                    <SelectValue placeholder="Select a class" />
+                    <SelectValue placeholder={m.bookings.dialog.selectClass} />
                   </SelectTrigger>
                   <SelectContent>
                     {classTypes.map((classType) => (
@@ -183,7 +186,7 @@ export function BookingDialog({ open, onOpenChange }: BookingDialogProps) {
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field>
-                <FieldLabel htmlFor={`${idPrefix}-date`}>Date</FieldLabel>
+                <FieldLabel htmlFor={`${idPrefix}-date`}>{m.bookings.dialog.dateLabel}</FieldLabel>
                 <Select
                   // Same reason as the Class select above: '' keeps this controlled through the
                   // reset to null, so the trigger actually shows the "Select a date" placeholder
@@ -193,7 +196,7 @@ export function BookingDialog({ open, onOpenChange }: BookingDialogProps) {
                   disabled={!selectedClassTypeId || dates.length === 0}
                 >
                   <SelectTrigger id={`${idPrefix}-date`} className="w-full">
-                    <SelectValue placeholder={selectedClassTypeId ? 'Select a date' : 'Select a class first'} />
+                    <SelectValue placeholder={selectedClassTypeId ? m.bookings.dialog.selectDate : m.bookings.dialog.selectClassFirst} />
                   </SelectTrigger>
                   <SelectContent>
                     {dates.map((date) => (
@@ -206,20 +209,22 @@ export function BookingDialog({ open, onOpenChange }: BookingDialogProps) {
               </Field>
 
               <Field data-invalid={!!errors.sessionId}>
-                <FieldLabel htmlFor={`${idPrefix}-time`}>Time</FieldLabel>
+                <FieldLabel htmlFor={`${idPrefix}-time`}>{m.bookings.dialog.timeLabel}</FieldLabel>
                 <Controller
                   control={control}
                   name="sessionId"
                   render={({ field }) => (
                     <Select value={field.value} onValueChange={field.onChange} disabled={!selectedDate || sessionsForDate.length === 0}>
                       <SelectTrigger id={`${idPrefix}-time`} aria-invalid={!!errors.sessionId} className="w-full">
-                        <SelectValue placeholder={selectedDate ? 'Select a time' : 'Select a date first'} />
+                        <SelectValue placeholder={selectedDate ? m.bookings.dialog.selectTime : m.bookings.dialog.selectDateFirst} />
                       </SelectTrigger>
                       <SelectContent>
                         {sessionsForDate.map((session) => (
                           <SelectItem key={session.id} value={session.id}>
                             {formatDisplayTime(session.startTime)} &middot;{' '}
-                            {session.occupancyState === 'full' ? 'FULL' : `${session.booked}/${session.capacity} spots`}
+                            {session.occupancyState === 'full'
+                              ? m.bookings.dialog.sessionOptionFull
+                              : m.bookings.dialog.sessionOptionSpots(session.booked, session.capacity)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -231,12 +236,12 @@ export function BookingDialog({ open, onOpenChange }: BookingDialogProps) {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-semibold text-text-secondary">Instructor</span>
+              <span className="text-xs font-semibold text-text-secondary">{m.bookings.dialog.instructorLabel}</span>
               {/* Not a form control - a derived, read-only fact about the selected session
                   (docs/03 section 11.4-A), so it carries no name/register/Controller binding. */}
               <div className="flex h-10 items-center justify-between rounded-field border border-border bg-surface-muted px-3 text-sm text-ink">
                 <span>{selectedInstructor?.name ?? '—'}</span>
-                <span className="text-xs text-text-tertiary">Derived from class</span>
+                <span className="text-xs text-text-tertiary">{m.bookings.dialog.derivedFromClass}</span>
               </div>
             </div>
 
@@ -245,7 +250,7 @@ export function BookingDialog({ open, onOpenChange }: BookingDialogProps) {
                 <div className="flex items-center gap-3">
                   <OccupancyBar rate={selectedSession.occupancyRate} accent={selectedClassType.accent} showPercentage={false} />
                   <span className="shrink-0 text-sm font-semibold text-ink tabular-nums">
-                    {selectedSession.booked} / {selectedSession.capacity} spots reserved
+                    {m.bookings.dialog.spotsReserved(selectedSession.booked, selectedSession.capacity)}
                   </span>
                 </div>
                 {selectedSession.occupancyState !== 'available' ? (
@@ -254,9 +259,7 @@ export function BookingDialog({ open, onOpenChange }: BookingDialogProps) {
                   </div>
                 ) : null}
                 {isFull ? (
-                  <p className="text-sm text-text-secondary">
-                    This class is full. Join the waitlist and we will reach out the moment a spot opens.
-                  </p>
+                  <p className="text-sm text-text-secondary">{m.bookings.dialog.fullClassNotice}</p>
                 ) : null}
               </div>
             ) : null}
@@ -273,11 +276,11 @@ export function BookingDialog({ open, onOpenChange }: BookingDialogProps) {
 
           <DialogFooter>
             <Button type="button" variant="secondary" disabled={isPending} onClick={() => handleOpenChange(false)}>
-              Cancel
+              {m.common.cancel}
             </Button>
             <Button type="submit" variant="primary" disabled={isPending}>
               {isPending && <Loader2 aria-hidden="true" className="size-4 animate-spin" />}
-              {isFull ? 'Join waitlist' : 'Reserve booking'}
+              {isFull ? m.bookings.dialog.joinWaitlist : m.bookings.dialog.reserveBooking}
             </Button>
           </DialogFooter>
         </form>

@@ -11,10 +11,12 @@ import { BrandingSection } from '@/components/settings/branding-section';
 import { GeneralSection } from '@/components/settings/general-section';
 import { NotificationsSection } from '@/components/settings/notifications-section';
 import { useDemoStatus } from '@/hooks/use-demo-status';
+import { useMessages } from '@/hooks/use-messages';
 import { useSettingsForm } from '@/hooks/use-settings-form';
 import { useDemoRuntimeStore } from '@/stores/demo-runtime.store';
 
 export default function SettingsPage() {
+  const m = useMessages();
   const status = useDemoStatus();
   const retryHydration = useDemoRuntimeStore((state) => state.retryHydration);
   const { settings, updateSection } = useSettingsForm();
@@ -22,8 +24,8 @@ export default function SettingsPage() {
   if (status === 'error') {
     return (
       <div className="flex flex-col gap-6">
-        <PageHeader title="Settings" subtitle="Studio profile, booking policy and branding." />
-        <ErrorState description="We couldn't load your studio settings." onRetry={retryHydration} />
+        <PageHeader title={m.settings.pageTitle} subtitle={m.settings.pageSubtitle} />
+        <ErrorState description={m.settings.loadErrorFallback} onRetry={retryHydration} />
       </div>
     );
   }
@@ -31,7 +33,7 @@ export default function SettingsPage() {
   if (status !== 'ready' || !settings) {
     return (
       <div className="flex flex-col gap-6">
-        <PageHeader title="Settings" subtitle="Studio profile, booking policy and branding." />
+        <PageHeader title={m.settings.pageTitle} subtitle={m.settings.pageSubtitle} />
         {/* LoadingSkeleton has no 'form-section' variant - docs/06 section 4.5 names one, but the
            shared component (read-only to this task) only ships card/table-row/chart/kpi/text.
            'card' is the closest existing shape; reported for hoisting rather than editing the
@@ -43,7 +45,7 @@ export default function SettingsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Settings" subtitle="Studio profile, booking policy and branding." />
+      <PageHeader title={m.settings.pageTitle} subtitle={m.settings.pageSubtitle} />
       <GeneralSection general={settings.general} onSave={(changes) => updateSection('general', changes)} />
       <BookingSection booking={settings.booking} onSave={(changes) => updateSection('booking', changes)} />
       <NotificationsSection

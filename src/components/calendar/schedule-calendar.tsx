@@ -13,9 +13,12 @@ import FullCalendarComponent from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
+import esLocale from '@fullcalendar/core/locales/es';
 import { TriangleAlert } from 'lucide-react';
 import type { CalendarSessionEventProps } from '@/hooks/use-calendar-events';
 import type { ISODate, ISODateTime } from '@/domain/types';
+import { useMessages } from '@/hooks/use-messages';
+import { useLocaleStore } from '@/stores/locale.store';
 import type { CalendarViewName } from './calendar-toolbar';
 
 export interface ScheduleCalendarProps {
@@ -43,16 +46,16 @@ function stripOffset(dateTime: ISODateTime): string {
   return dateTime.replace(/[+-]\d{2}:\d{2}$/, '');
 }
 
-function renderEventContent(arg: EventContentArg) {
+function renderEventContent(arg: EventContentArg, m: ReturnType<typeof useMessages>) {
   const props = arg.event.extendedProps as CalendarSessionEventProps;
   return (
     <div className="flex w-full items-center justify-between gap-1 overflow-hidden px-0.5 text-[11px] leading-tight">
       <span className="truncate font-semibold">{arg.event.title}</span>
       {props.overbooked ? (
-        <TriangleAlert aria-label="Overbooked" className="h-3 w-3 shrink-0 text-danger-text" />
+        <TriangleAlert aria-label={m.calendar.event.overbooked} className="h-3 w-3 shrink-0 text-danger-text" />
       ) : (
         <span className="shrink-0 tabular-nums">
-          {props.occupancyState === 'full' ? 'FULL' : `${props.booked}/${props.capacity}`}
+          {props.occupancyState === 'full' ? m.calendar.event.full : `${props.booked}/${props.capacity}`}
         </span>
       )}
     </div>
@@ -69,6 +72,13 @@ export default function ScheduleCalendar({
   onApiReady,
 }: ScheduleCalendarProps) {
   const calendarRef = useRef<FullCalendarComponent>(null);
+  const m = useMessages();
+  // FullCalendar ships its own locale bundles for its chrome (weekday/month names, the
+  // "all-day" row, built-in button text) - English is FullCalendar's built-in default, so only
+  // Spanish needs an imported bundle (ADR-012: FullCalendar stays the one place @fullcalendar/*
+  // is imported).
+  const activeLocale = useLocaleStore((state) => state.locale);
+  const fullCalendarLocale = activeLocale === 'es' ? esLocale : undefined;
 
   // Runs once on mount - by then FullCalendarComponent's own componentDidMount has already run
   // synchronously, so getApi() is available. calendar-view.tsx passes a useCallback-stabilised
@@ -88,6 +98,7 @@ export default function ScheduleCalendar({
         // ADR-018: initialDate/now read the demo clock, never new Date().
         initialDate={demoToday}
         now={stripOffset(demoNow)}
+        locale={fullCalendarLocale}
         headerToolbar={false}
         height="100%"
         firstDay={1}
@@ -98,7 +109,7 @@ export default function ScheduleCalendar({
         dayMaxEvents={3}
         eventDisplay="block"
         events={events}
-        eventContent={renderEventContent}
+        eventContent={(arg: EventContentArg) => renderEventContent(arg, m)}
         eventClick={(arg: EventClickArg) => onEventClick(arg.event.id)}
         datesSet={(arg: DatesSetArg) => onRangeChange(arg.view.title)}
       />

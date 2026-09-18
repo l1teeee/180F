@@ -5,7 +5,9 @@
 // deviation. Presentational grouping only (bucketing already-resolved SessionCard[] by date) -
 // no occupancy or count is computed here.
 import type { ISODate, SessionCard } from '@/domain/types';
-import { addDaysISO, formatDisplayTime, formatWeekdayShort, getDayOfMonth } from '@/lib/dates';
+import { useDateLocale } from '@/hooks/use-date-locale';
+import { useMessages } from '@/hooks/use-messages';
+import { addDaysISO, getDayOfMonth } from '@/lib/dates';
 
 export interface InstructorSchedulePreviewProps {
   sessions: SessionCard[]; // upcoming, chronological
@@ -15,6 +17,8 @@ export interface InstructorSchedulePreviewProps {
 const PREVIEW_DAYS = 7;
 
 export function InstructorSchedulePreview({ sessions, demoToday }: InstructorSchedulePreviewProps) {
+  const m = useMessages();
+  const { formatDisplayTime, formatWeekdayShort } = useDateLocale();
   const days = Array.from({ length: PREVIEW_DAYS }, (_, index) => addDaysISO(demoToday, index));
 
   const sessionsByDate = new Map<ISODate, SessionCard[]>();
@@ -44,7 +48,7 @@ export function InstructorSchedulePreview({ sessions, demoToday }: InstructorSch
               <span className="text-sm font-bold text-ink tabular-nums">{getDayOfMonth(date)}</span>
             </div>
             {daySessions.length === 0 ? (
-              <span className="text-xs text-text-secondary">No classes</span>
+              <span className="text-xs text-text-secondary">{m.instructors.emptyStates.noClassesToday}</span>
             ) : (
               <div className="flex flex-col gap-1">
                 {daySessions.map((session) => (

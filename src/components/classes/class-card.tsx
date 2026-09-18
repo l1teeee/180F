@@ -11,6 +11,7 @@ import { AvatarGroup } from '@/components/shared/avatar-group';
 import { ACCENT_ICON_BG_CLASS, ClassIcon } from '@/components/shared/class-icon';
 import { OccupancyBar } from '@/components/shared/occupancy-bar';
 import type { AccentToken, ClassTypeWithStats, Instructor } from '@/domain/types';
+import { useMessages } from '@/hooks/use-messages';
 
 export interface ClassCardProps {
   classType: ClassTypeWithStats;
@@ -32,6 +33,7 @@ const ACCENT_TOP_BAR_CLASS: Record<AccentToken, string> = {
 };
 
 export function ClassCard({ classType, instructors, index = 0 }: ClassCardProps) {
+  const m = useMessages();
   return (
     <Link
       href={`/classes/${classType.id}`}
@@ -61,7 +63,7 @@ export function ClassCard({ classType, instructors, index = 0 }: ClassCardProps)
 
       <div className="flex items-baseline gap-1.5 text-sm">
         <span className="text-lg font-bold tabular-nums text-ink">{classType.weeklySessions}</span>
-        <span className="font-medium text-text-secondary">sessions / week</span>
+        <span className="font-medium text-text-secondary">{m.classes.sessionsPerWeekUnit(classType.weeklySessions)}</span>
       </div>
 
       {/* Stacked label instead of OccupancyBar's own inline `label` prop: that prop reserves a
@@ -71,12 +73,12 @@ export function ClassCard({ classType, instructors, index = 0 }: ClassCardProps)
           collapses to 0 width and the bar disappears entirely. Stacking the label above leaves the
           track the full card width at every breakpoint. */}
       <div className="flex flex-col gap-1.5">
-        <span className="text-sm font-medium text-ink">Avg. occupancy</span>
+        <span className="text-sm font-medium text-ink">{m.classes.card.avgOccupancy}</span>
         <OccupancyBar rate={classType.averageOccupancy} accent={classType.accent} />
       </div>
 
       <div className="mt-auto flex items-center justify-between border-t border-border pt-4">
-        <span className="text-xs font-semibold text-text-secondary">Instructors</span>
+        <span className="text-xs font-semibold text-text-secondary">{m.classes.card.instructorsLabel}</span>
         {instructors.length > 0 ? (
           <AvatarGroup
             people={instructors.map((instructor) => ({
@@ -89,7 +91,7 @@ export function ClassCard({ classType, instructors, index = 0 }: ClassCardProps)
             max={3}
           />
         ) : (
-          <span className="text-xs text-text-secondary">Unassigned</span>
+          <span className="text-xs text-text-secondary">{m.classes.card.unassigned}</span>
         )}
       </div>
     </Link>

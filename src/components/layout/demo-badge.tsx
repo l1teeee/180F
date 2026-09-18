@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import { badgeVariants } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
+import { useMessages } from '@/hooks/use-messages';
 import { useDemoRuntimeStore } from '@/stores/demo-runtime.store';
 import { cn } from '@/lib/cn';
 
@@ -23,15 +24,14 @@ export interface DemoBadgeProps {
   className?: string; // no other props; tooltip copy is fixed (§45)
 }
 
-const TOOLTIP_COPY = 'Some data and functionality in this environment are simulated.';
-
 export function DemoBadge({ className }: DemoBadgeProps) {
+  const m = useMessages();
   const resetDemoData = useDemoRuntimeStore((state) => state.resetDemoData);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   async function handleReset() {
     await resetDemoData();
-    toast.success('Demo data has been reset.');
+    toast.success(m.layout.demoDataResetToast);
   }
 
   return (
@@ -41,9 +41,9 @@ export function DemoBadge({ className }: DemoBadgeProps) {
             on it instead of nesting a separate Button/Badge as an asChild ref target. */}
         <TooltipTrigger className={cn(badgeVariants({ variant: 'neutralBrand' }), 'cursor-default')}>
           <FlaskConical aria-hidden="true" />
-          Demo Mode
+          {m.layout.demoModeLabel}
         </TooltipTrigger>
-        <TooltipContent>{TOOLTIP_COPY}</TooltipContent>
+        <TooltipContent>{m.layout.demoModeTooltip}</TooltipContent>
       </Tooltip>
       {/* Visual size stays 26px to match the adjacent pill (docs/03 section 5 "Pills and
           badges"), but docs/03 section 10's 40px hit-target floor still applies - the ::before
@@ -52,8 +52,8 @@ export function DemoBadge({ className }: DemoBadgeProps) {
       <button
         type="button"
         onClick={() => setConfirmOpen(true)}
-        aria-label="Reset demo data"
-        title="Reset demo data"
+        aria-label={m.layout.resetDemoData}
+        title={m.layout.resetDemoData}
         className="relative inline-flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-pill border border-border bg-surface text-text-secondary transition-colors duration-[var(--duration-fast)] ease-out before:absolute before:-inset-2 before:content-[''] hover:bg-surface-muted hover:text-ink"
       >
         <RotateCcw aria-hidden="true" className="h-3.5 w-3.5" />
@@ -61,9 +61,9 @@ export function DemoBadge({ className }: DemoBadgeProps) {
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
-        title="Reset demo data?"
-        description="This cannot be undone. Every booking, edit and message made in this session will be discarded and today's demo will reseed from scratch."
-        confirmLabel="Reset"
+        title={m.layout.resetDemoDataConfirmTitle}
+        description={m.layout.resetDemoDataConfirmDescription}
+        confirmLabel={m.common.reset}
         destructive
         onConfirm={handleReset}
       />

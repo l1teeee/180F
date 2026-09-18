@@ -20,6 +20,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { NavItem } from '@/domain/constants';
+import { useMessages } from '@/hooks/use-messages';
 import { cn } from '@/lib/cn';
 
 // NavItem.icon is a plain `string` (src/domain/constants/nav-items.ts, "resolved through a
@@ -55,15 +56,16 @@ interface NavLinksProps {
 }
 
 export function NavLinks({ items, onNavigate }: NavLinksProps) {
+  const m = useMessages();
   const pathname = usePathname();
   const primary = items.filter((item) => !SECONDARY_NAV_LABELS.has(item.label));
   const secondary = items.filter((item) => SECONDARY_NAV_LABELS.has(item.label));
 
   return (
-    <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3" aria-label="Primary">
-      <NavGroup items={primary} pathname={pathname} onNavigate={onNavigate} />
+    <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3" aria-label={m.layout.primaryNavigation}>
+      <NavGroup items={primary} pathname={pathname} onNavigate={onNavigate} nav={m.layout.nav} />
       <div role="separator" className="my-2 h-px bg-border" />
-      <NavGroup items={secondary} pathname={pathname} onNavigate={onNavigate} />
+      <NavGroup items={secondary} pathname={pathname} onNavigate={onNavigate} nav={m.layout.nav} />
     </nav>
   );
 }
@@ -72,10 +74,12 @@ function NavGroup({
   items,
   pathname,
   onNavigate,
+  nav,
 }: {
   items: NavItem[];
   pathname: string;
   onNavigate?: () => void;
+  nav: Record<string, string>;
 }) {
   return (
     <ul className="flex flex-col gap-1">
@@ -97,7 +101,7 @@ function NavGroup({
                 <span aria-hidden="true" className="absolute inset-y-1.5 left-0 w-[3px] rounded-pill bg-purple" />
               ) : null}
               <Icon aria-hidden="true" className="h-[18px] w-[18px] shrink-0" />
-              {item.label}
+              {nav[item.href] ?? item.label}
             </Link>
           </li>
         );

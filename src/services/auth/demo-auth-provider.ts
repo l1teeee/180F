@@ -3,6 +3,15 @@
 // bounce an already-signed-in demo user back to /login.
 import type { AuthProvider, AuthUser } from './auth-provider';
 
+// AuthProvider.signIn's contract (auth-provider.ts, not owned by this namespace) only requires
+// rejecting with a plain Error - it does not fix what the message says. This provider throws a
+// stable CODE as that message, never a locale-bound sentence (the auth provider is not a UI
+// layer and may not pick a locale, docs/02-ARCHITECTURE.md section 1); login-form.tsx maps this
+// code to translated copy through the `auth` namespace, with a generic fallback for any other
+// message (e.g. SupabaseAuthProvider's own, unrelated error text).
+export type DemoAuthErrorCode = 'invalid_credentials';
+export const INVALID_CREDENTIALS: DemoAuthErrorCode = 'invalid_credentials';
+
 const DEMO_EMAIL = 'admin@demo.com';
 const DEMO_PASSWORD = 'demo1234';
 const DEMO_USER: AuthUser = { id: 'demo-admin', email: DEMO_EMAIL, name: 'Studio Admin' };
@@ -41,7 +50,7 @@ export class DemoAuthProvider implements AuthProvider {
 
   async signIn(email: string, password: string): Promise<AuthUser> {
     if (email.trim().toLowerCase() !== DEMO_EMAIL || password !== DEMO_PASSWORD) {
-      throw new Error('Invalid email or password.');
+      throw new Error(INVALID_CREDENTIALS);
     }
     writeStoredSession(DEMO_USER);
     return DEMO_USER;

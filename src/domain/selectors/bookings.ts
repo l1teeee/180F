@@ -17,7 +17,7 @@ import type {
   StudioSettings,
   WeeklyBookingPoint,
 } from '@/domain/types';
-import { addDaysISO, formatWeekdayShort, lastNISODates } from '@/lib/dates';
+import { addDaysISO, lastNISODates } from '@/lib/dates';
 import { selectSessionOccupancy } from './sessions';
 
 export function indexBookingsBySession(bookings: Booking[]): Map<string, Booking[]> {
@@ -97,7 +97,6 @@ export function selectWeeklyBookingTrend(
 
   return lastNISODates(demoToday, 7).map((date) => ({
     date,
-    label: formatWeekdayShort(date),
     bookings: countByDate.get(date) ?? 0,
   }));
 }
@@ -222,9 +221,16 @@ export function selectBookingEligibility(params: BookingEligibilityParams): Book
 // (originally just capacity), so promotion and creation can never drift apart again.
 export type PromotionRejectionReason = BookingRejectionReason | 'not_waitlisted';
 
+// `message` is BookingEligibility's own field (src/domain/types/inputs.ts, not owned by this
+// namespace) and stays an English sentence until that render site migrates - kept only so
+// today's callers (bookings-table.tsx) do not break. `limit` is the structured operand this
+// namespace adds beside it: the one rejection reason whose sentence interpolates a number
+// (`daily_limit_reached`, "already has N booking(s) on this day"). A caller that has moved off
+// `message` can translate the reason itself through the `bookings` namespace and only needs
+// this field when reason === 'daily_limit_reached' - see docs comment on selectPromotionEligibility.
 export type PromotionEligibility =
   | { allowed: true }
-  | { allowed: false; reason: PromotionRejectionReason; message: string };
+  | { allowed: false; reason: PromotionRejectionReason; message: string; limit?: number };
 
 export interface PromotionEligibilityParams {
   bookingId: string;
@@ -237,6 +243,11 @@ export interface PromotionEligibilityParams {
   demoNow: ISODateTime;
 }
 
+// See the PromotionEligibility comment above for why this still returns `message`. The `limit`
+// field is filled in here, from `settings` (already a parameter, not something the caller has
+// to look up separately), whenever the delegated check comes back as the one reason whose
+// sentence needs a number - render sites are expected to move onto `reason` + `limit` and stop
+// reading `message` (bookings-table.tsx has not yet - see file header comment).
 export function selectPromotionEligibility(params: PromotionEligibilityParams): PromotionEligibility {
   const { bookingId, bookingStatus, session, customer, bookings, sessions, settings, demoNow } = params;
 
@@ -247,7 +258,7 @@ export function selectPromotionEligibility(params: PromotionEligibilityParams): 
   // The booking being promoted is excluded from the ledger passed down so it never counts as
   // "the customer's own active booking for this session" in selectBookingEligibility's
   // already_booked check below - it is that booking, about to become one.
-  return selectBookingEligibility({
+  const result = selectBookingEligibility({
     session,
     customer,
     bookings: bookings.filter((booking) => booking.id !== bookingId),
@@ -256,6 +267,10 @@ export function selectPromotionEligibility(params: PromotionEligibilityParams): 
     demoNow,
     requestedStatus: 'confirmed',
   });
+  if (!result.allowed && result.reason === 'daily_limit_reached') {
+    return { ...result, limit: settings.booking.maxReservationsPerDay };
+  }
+  return result;
 }
 
 export type CancellationRejectionReason = 'already_cancelled' | 'outside_cancellation_window';

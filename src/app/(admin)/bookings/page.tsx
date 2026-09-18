@@ -24,9 +24,10 @@ import type { BookingFilters, BookingRow } from '@/domain/types';
 import { useBookingRows } from '@/hooks/use-booking-rows';
 import { useBookingsSessionFilter } from '@/hooks/use-bookings-session-filter';
 import { useBookingsTabCounts, type BookingsTabKey } from '@/hooks/use-bookings-tab-counts';
+import { useDateLocale } from '@/hooks/use-date-locale';
 import { useDemoStatus } from '@/hooks/use-demo-status';
+import { useMessages } from '@/hooks/use-messages';
 import { useSessionCard } from '@/hooks/use-session-card';
-import { formatDisplayDateShort, formatDisplayTime } from '@/lib/dates';
 import { useBookingStore } from '@/stores/booking.store';
 import { useDemoRuntimeStore } from '@/stores/demo-runtime.store';
 import { useSessionStore } from '@/stores/session.store';
@@ -45,6 +46,8 @@ export default function BookingsPage() {
 }
 
 function BookingsPageContent() {
+  const m = useMessages();
+  const { formatDisplayDateShort, formatDisplayTime } = useDateLocale();
   const status = useDemoStatus();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -112,12 +115,12 @@ function BookingsPageContent() {
     if (!cancelTarget) return;
     const result = await useBookingStore.getState().cancelBooking(cancelTarget.id, { override: true });
     if (!result.ok) {
-      toast.error(result.message);
+      toast.error(m.bookings.promotionRejectionReason(result.reason));
       // ConfirmDialog's contract (src/components/shared/confirm-dialog.tsx): a thrown onConfirm
       // keeps the dialog open instead of closing on a rejection it never explains itself.
       throw new Error(result.reason);
     }
-    toast.success('Booking cancelled');
+    toast.success(m.bookings.toastCancelled);
   }
 
   // Direct action, no confirm dialog (ADR-024: promotion is not destructive) - still surfaces a
@@ -127,10 +130,14 @@ function BookingsPageContent() {
     try {
       const result = await useBookingStore.getState().promoteFromWaitlist(row.id);
       if (!result.ok) {
-        toast.error(result.message);
+        // PromoteActionResult (src/stores/booking.store.ts, not owned by this namespace) does
+        // not carry `limit` even though selectPromotionEligibility can compute one for
+        // 'daily_limit_reached' - the toast falls back to the reason's generic wording rather
+        // than fabricating a count.
+        toast.error(m.bookings.promotionRejectionReason(result.reason));
         return;
       }
-      toast.success(`${row.customer.name} promoted to confirmed.`);
+      toast.success(m.bookings.toastPromoted(row.customer.name));
     } finally {
       setPromotingId(null);
     }
@@ -139,8 +146,8 @@ function BookingsPageContent() {
   if (status === 'error') {
     return (
       <div className="flex flex-col gap-6">
-        <PageHeader title="Bookings" subtitle="Manage all class reservations." />
-        <SectionCard title="All bookings">
+        <PageHeader title={m.bookings.title} subtitle={m.bookings.subtitle} />
+        <SectionCard title={m.bookings.allBookings}>
           <ErrorState onRetry={() => void useDemoRuntimeStore.getState().retryHydration()} />
         </SectionCard>
       </div>
@@ -150,16 +157,16 @@ function BookingsPageContent() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Bookings"
-        subtitle="Manage all class reservations."
+        title={m.bookings.title}
+        subtitle={m.bookings.subtitle}
         actions={
           <Button type="button" variant="ink" onClick={() => setDialogOpen(true)}>
-            New booking
+            {m.bookings.newBooking}
           </Button>
         }
       />
 
-      <SectionCard title="All bookings">
+      <SectionCard title={m.bookings.allBookings}>
         {status !== 'ready' ? (
           <div className="flex flex-col gap-5">
             <div className="flex flex-wrap gap-3">
@@ -176,11 +183,15 @@ function BookingsPageContent() {
             {sessionFilter.sessionId ? (
               <div className="flex flex-wrap items-center gap-2 rounded-chip border border-purple-soft bg-purple-xsoft px-3.5 py-2.5 text-sm text-purple-deep">
                 <span className="font-medium">
-                  Filtered to session: {filteredSession ? `${filteredSession.classType.name} · ${formatDisplayDateShort(filteredSession.date)} · ${formatDisplayTime(filteredSession.startTime)}` : sessionFilter.sessionId}
+                  {m.bookings.filteredToSession(
+                    filteredSession
+                      ? `${filteredSession.classType.name} · ${formatDisplayDateShort(filteredSession.date)} · ${formatDisplayTime(filteredSession.startTime)}`
+                      : sessionFilter.sessionId,
+                  )}
                 </span>
                 <Button type="button" variant="ghost" onClick={sessionFilter.clear} className="ml-auto h-7 shrink-0 px-2 text-purple-deep hover:bg-purple-soft">
                   <X aria-hidden="true" className="h-3.5 w-3.5" />
-                  Clear
+                  {m.bookings.clear}
                 </Button>
               </div>
             ) : null}
@@ -204,13 +215,17 @@ function BookingsPageContent() {
         onOpenChange={(open) => {
           if (!open) setCancelTarget(null);
         }}
-        title="Cancel this booking?"
+        title={m.bookings.cancelDialog.title}
         description={
           cancelTarget
-            ? `This cancels ${cancelTarget.customer.name}'s booking for ${cancelTarget.classType.name} on ${formatDisplayDateShort(cancelTarget.session.date)} and cannot be undone.`
+            ? m.bookings.cancelDialog.description(
+                cancelTarget.customer.name,
+                cancelTarget.classType.name,
+                formatDisplayDateShort(cancelTarget.session.date),
+              )
             : undefined
         }
-        confirmLabel="Cancel booking"
+        confirmLabel={m.bookings.cancelDialog.confirmLabel}
         destructive
         onConfirm={handleConfirmCancel}
       />

@@ -11,6 +11,7 @@ import { AvatarBlobatar } from '@/components/ui/avatar';
 import { ACCENT_FALLBACK_CLASSNAME } from '@/components/shared/accent-fallback-class';
 import { StatusBadge } from '@/components/shared/status-badge';
 import type { InstructorRosterEntry } from '@/hooks/use-instructors-roster';
+import { useMessages } from '@/hooks/use-messages';
 import { paletteForAccent } from '@/lib/avatar';
 import { initialsFor } from './avatar-initials';
 
@@ -20,6 +21,7 @@ export interface InstructorCardProps {
 }
 
 export function InstructorCard({ instructor, index = 0 }: InstructorCardProps) {
+  const m = useMessages();
   return (
     <Link
       href={`/instructors/${instructor.id}`}
@@ -52,12 +54,13 @@ export function InstructorCard({ instructor, index = 0 }: InstructorCardProps) {
           ·
         </span>
         <span className="text-text-secondary">
-          <span className="font-semibold text-ink tabular-nums">{instructor.weeklySessions}</span> sessions / week
+          <span className="font-semibold text-ink tabular-nums">{instructor.weeklySessions}</span>{' '}
+          {m.instructors.sessionsPerWeekUnit(instructor.weeklySessions)}
         </span>
       </div>
 
       <div className="mt-auto pt-1">
-        <StatusBadge status={instructor.status} />
+        <StatusBadge status={instructor.status} label={m.instructors.statusLabel[instructor.status]} />
       </div>
     </Link>
   );

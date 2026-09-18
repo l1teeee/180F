@@ -10,13 +10,14 @@ import { useState } from 'react';
 import { TriangleAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useMessages } from '@/hooks/use-messages';
 
 export interface ConfirmDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
   description?: string;
-  confirmLabel?: string; // default 'Confirm'
+  confirmLabel?: string; // default m.common.confirm
   destructive?: boolean;
   onConfirm: () => void | Promise<void>;
 }
@@ -26,10 +27,11 @@ export function ConfirmDialog({
   onOpenChange,
   title,
   description,
-  confirmLabel = 'Confirm',
+  confirmLabel,
   destructive,
   onConfirm,
 }: ConfirmDialogProps) {
+  const m = useMessages();
   const [pending, setPending] = useState(false);
 
   // Radix's own close-focus restore (@radix-ui/react-dialog's DialogContentModal) targets
@@ -85,7 +87,7 @@ export function ConfirmDialog({
         </DialogHeader>
         <DialogFooter>
           <Button type="button" variant="secondary" autoFocus disabled={pending} onClick={() => onOpenChange(false)}>
-            Cancel
+            {m.common.cancel}
           </Button>
           <Button
             type="button"
@@ -94,7 +96,7 @@ export function ConfirmDialog({
             onClick={handleConfirm}
             className={destructive ? 'bg-danger-deep hover:opacity-90' : undefined}
           >
-            {confirmLabel}
+            {confirmLabel ?? m.common.confirm}
           </Button>
         </DialogFooter>
       </DialogContent>

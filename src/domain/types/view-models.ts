@@ -53,7 +53,12 @@ export interface BookingRow extends Booking {
 export interface CustomerActivityEntry {
   id: string;
   kind: ActivityKind;
-  label: string; // 'Attended Functional Training'
+  // The class name this entry is about - absent for 'joined', which names no class. A
+  // component builds the sentence from `kind` + `className` through the dictionary (the
+  // domain layer never picks a locale - docs/02-ARCHITECTURE.md section 1). `label` was
+  // dropped from this view model for the same reason WeeklyBookingPoint.label was: emitting a
+  // fixed English sentence here would keep the customer activity timeline in English forever.
+  className: string | null;
   at: ISODateTime;
   sessionId: string | null;
 }
@@ -68,9 +73,12 @@ export interface DashboardKpis {
   todayAlmostFull: number;
 }
 
+// `label` (a formatted weekday name) was dropped from this view model: producing it inside the
+// selector meant the domain layer had to pick a locale, which breaks the dependency rule (domain
+// never imports UI/i18n - docs/02-ARCHITECTURE.md section 1). Consumers derive the weekday label
+// from `date` themselves, in the active language (src/hooks/use-date-locale.ts).
 export interface WeeklyBookingPoint {
   date: ISODate;
-  label: string; // 'Mon'
   bookings: number;
 }
 

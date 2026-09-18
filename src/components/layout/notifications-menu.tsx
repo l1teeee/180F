@@ -10,6 +10,8 @@ import { Bell, BellRing, CalendarCheck, CalendarX, CheckCheck, Users, type Lucid
 import { buttonVariants } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import type { Notification, NotificationType } from '@/domain/types';
+import { useMessages } from '@/hooks/use-messages';
+import type { Messages } from '@/i18n/messages';
 import { cn } from '@/lib/cn';
 import { useDemoRuntimeStore } from '@/stores/demo-runtime.store';
 import { useNotificationStore } from '@/stores/notification.store';
@@ -32,26 +34,28 @@ function selectUnreadCount(notifications: Notification[]): number {
 
 // Relative to the demo clock only (ADR-018) - never Date.now(). Kept local to this file:
 // src/lib/dates.ts is read-only for this task and has no relative-time helper of its own yet.
-function formatRelativeToDemoNow(iso: string, demoNow: string): string {
+function formatRelativeToDemoNow(iso: string, demoNow: string, m: Messages): string {
   const target = parseISO(iso);
   const now = parseISO(demoNow);
   const minutes = differenceInMinutes(now, target);
-  if (minutes < 1) return 'Just now';
-  if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
+  if (minutes < 1) return m.layout.justNow;
+  if (minutes < 60) return m.layout.minutesAgo(minutes);
   const hours = differenceInHours(now, target);
-  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+  if (hours < 24) return m.layout.hoursAgo(hours);
   const days = differenceInDays(now, target);
-  return `${days} day${days === 1 ? '' : 's'} ago`;
+  return m.layout.daysAgo(days);
 }
 
 function NotificationRow({
   notification,
   demoNow,
   onRead,
+  m,
 }: {
   notification: Notification;
   demoNow: string | null;
   onRead: (id: string) => void;
+  m: Messages;
 }) {
   const Icon = TYPE_ICON[notification.type];
   return (
@@ -72,7 +76,7 @@ function NotificationRow({
         </span>
         <span className="text-xs text-text-secondary">{notification.description}</span>
         <span className="text-[11px] text-text-tertiary tabular-nums">
-          {demoNow ? formatRelativeToDemoNow(notification.createdAt, demoNow) : ''}
+          {demoNow ? formatRelativeToDemoNow(notification.createdAt, demoNow, m) : ''}
         </span>
       </span>
     </DropdownMenuItem>
@@ -80,6 +84,7 @@ function NotificationRow({
 }
 
 export function NotificationsMenu() {
+  const m = useMessages();
   const notifications = useNotificationStore((state) => state.notifications);
   const markRead = useNotificationStore((state) => state.markRead);
   const markAllRead = useNotificationStore((state) => state.markAllRead);
@@ -93,7 +98,7 @@ export function NotificationsMenu() {
     <DropdownMenu open={notificationsOpen} onOpenChange={setNotificationsOpen}>
       <DropdownMenuTrigger
         className={cn(buttonVariants({ variant: 'icon' }), 'relative')}
-        aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
+        aria-label={unreadCount > 0 ? m.layout.notificationsUnread(unreadCount) : m.layout.notifications}
       >
         <Bell aria-hidden="true" className="h-[18px] w-[18px]" />
         {unreadCount > 0 ? (
@@ -107,22 +112,22 @@ export function NotificationsMenu() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80 p-0">
         <div className="flex items-center justify-between px-3 pt-2.5 pb-2">
-          <span className="text-[15px] font-semibold text-ink">Notifications</span>
+          <span className="text-[15px] font-semibold text-ink">{m.layout.notificationsTitle}</span>
           <button
             type="button"
             onClick={markAllRead}
             disabled={unreadCount === 0}
             className="text-xs font-semibold text-purple-deep hover:underline disabled:pointer-events-none disabled:opacity-40"
           >
-            Mark all read
+            {m.layout.markAllRead}
           </button>
         </div>
         <div className="max-h-96 overflow-y-auto px-1.5 pb-1.5">
           {notifications.length === 0 ? (
-            <p className="px-3 py-6 text-center text-sm text-text-secondary">You&apos;re all caught up</p>
+            <p className="px-3 py-6 text-center text-sm text-text-secondary">{m.layout.allCaughtUp}</p>
           ) : (
             notifications.map((notification) => (
-              <NotificationRow key={notification.id} notification={notification} demoNow={demoNow} onRead={markRead} />
+              <NotificationRow key={notification.id} notification={notification} demoNow={demoNow} onRead={markRead} m={m} />
             ))
           )}
         </div>

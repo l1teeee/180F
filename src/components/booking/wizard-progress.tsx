@@ -1,20 +1,22 @@
 import { cn } from "@/lib/cn"
-
-const STEPS = [
-  { n: 1, label: "Class" },
-  { n: 2, label: "Date" },
-  { n: 3, label: "Time" },
-  { n: 4, label: "Details" },
-] as const
+import { useMessages } from "@/hooks/use-messages"
 
 // docs/06-ROUTES-AND-SCREENS.md section 3.14: "WizardProgress (4-step indicator) sits above
 // the step content on every step." A plain colour transition (already how Input/Button signal
 // focus and hover in this codebase) rather than a transform - this is step-navigation chrome,
 // not the booking numbers docs/03 section 12.3 rule 2 forbids animating.
 export function WizardProgress({ currentStep }: { currentStep: 1 | 2 | 3 | 4 }) {
+  const m = useMessages()
+  const steps = [
+    { n: 1, label: m.publicBooking.progress.steps.class },
+    { n: 2, label: m.publicBooking.progress.steps.date },
+    { n: 3, label: m.publicBooking.progress.steps.time },
+    { n: 4, label: m.publicBooking.progress.steps.details },
+  ] as const
+
   return (
-    <ol aria-label="Booking steps" className="flex items-center gap-2 pb-6 pt-2">
-      {STEPS.map((step) => {
+    <ol aria-label={m.publicBooking.progress.ariaLabel} className="flex items-center gap-2 pb-6 pt-2">
+      {steps.map((step) => {
         const state = step.n < currentStep ? "done" : step.n === currentStep ? "current" : "upcoming"
         return (
           <li

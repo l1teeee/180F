@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { SectionCard } from '@/components/shared/section-card';
+import { useMessages } from '@/hooks/use-messages';
 import { ResetDemoSection } from './reset-demo-section';
 
 type BrandingValues = StudioSettings['branding'];
@@ -26,6 +27,7 @@ interface BrandingSectionProps {
 }
 
 export function BrandingSection({ branding, onSave }: BrandingSectionProps) {
+  const m = useMessages();
   const {
     register,
     handleSubmit,
@@ -43,7 +45,7 @@ export function BrandingSection({ branding, onSave }: BrandingSectionProps) {
 
   function onSubmit(values: BrandingValues) {
     onSave(values);
-    toast.success('Branding settings saved.');
+    toast.success(m.settings.branding.savedToast);
   }
 
   // useWatch (not useForm's own watch()) so React Compiler can memoise this component - watch()
@@ -56,29 +58,29 @@ export function BrandingSection({ branding, onSave }: BrandingSectionProps) {
     // A second, unrelated card (ResetDemoSection) renders alongside this one - see that
     // component's own top comment for why it is mounted here instead of in page.tsx.
     <>
-      <SectionCard title="Branding">
+      <SectionCard title={m.settings.branding.title}>
         <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-5">
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
             <Field className="md:col-span-2">
-              <FieldLabel htmlFor="branding-logo">Logo URL</FieldLabel>
+              <FieldLabel htmlFor="branding-logo">{m.settings.branding.logoLabel}</FieldLabel>
               <Controller
                 control={control}
                 name="logo"
                 render={({ field }) => (
                   <Input
                     id="branding-logo"
-                    placeholder="https://..."
+                    placeholder={m.settings.branding.logoPlaceholder}
                     {...field}
                     value={field.value ?? ''}
                     onChange={(event) => field.onChange(event.target.value === '' ? null : event.target.value)}
                   />
                 )}
               />
-              <p className="text-sm text-text-secondary">Leave blank to use the default studio initial.</p>
+              <p className="text-sm text-text-secondary">{m.settings.branding.logoHelperText}</p>
             </Field>
 
             <Field data-invalid={!!errors.primaryColor}>
-              <FieldLabel htmlFor="branding-primary-color">Primary color</FieldLabel>
+              <FieldLabel htmlFor="branding-primary-color">{m.settings.branding.primaryColorLabel}</FieldLabel>
               <div className="flex items-center gap-2.5">
                 <span
                   aria-hidden="true"
@@ -92,11 +94,11 @@ export function BrandingSection({ branding, onSave }: BrandingSectionProps) {
                   {...register('primaryColor')}
                 />
               </div>
-              {errors.primaryColor ? <FieldError>{errors.primaryColor.message}</FieldError> : null}
+              {errors.primaryColor ? <FieldError>{m.settings.branding.errors.primaryColorInvalid}</FieldError> : null}
             </Field>
 
             <Field data-invalid={!!errors.accentColor}>
-              <FieldLabel htmlFor="branding-accent-color">Accent color</FieldLabel>
+              <FieldLabel htmlFor="branding-accent-color">{m.settings.branding.accentColorLabel}</FieldLabel>
               <div className="flex items-center gap-2.5">
                 <span
                   aria-hidden="true"
@@ -110,7 +112,7 @@ export function BrandingSection({ branding, onSave }: BrandingSectionProps) {
                   {...register('accentColor')}
                 />
               </div>
-              {errors.accentColor ? <FieldError>{errors.accentColor.message}</FieldError> : null}
+              {errors.accentColor ? <FieldError>{m.settings.branding.errors.accentColorInvalid}</FieldError> : null}
             </Field>
           </div>
 
@@ -118,13 +120,15 @@ export function BrandingSection({ branding, onSave }: BrandingSectionProps) {
             className="flex flex-wrap items-center gap-3 rounded-field border border-border p-3"
             style={{ backgroundImage: `linear-gradient(150deg, ${primaryColor} 0%, ${accentColor} 100%)` }}
           >
-            <span className="rounded-pill bg-white/90 px-3 py-1 text-xs font-semibold text-ink">Live preview</span>
-            <span className="text-sm font-medium text-white">This is how your brand colors pair together.</span>
+            <span className="rounded-pill bg-white/90 px-3 py-1 text-xs font-semibold text-ink">
+              {m.settings.branding.livePreviewBadge}
+            </span>
+            <span className="text-sm font-medium text-white">{m.settings.branding.livePreviewDescription}</span>
           </div>
 
           <div className="flex justify-end">
             <Button type="submit" variant="primary" disabled={isSubmitting}>
-              Save changes
+              {m.settings.branding.saveButton}
             </Button>
           </div>
         </form>

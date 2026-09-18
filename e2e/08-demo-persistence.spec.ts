@@ -150,13 +150,17 @@ test.describe('Demo state persistence across reload and tabs (ADR-022)', () => {
     await appShell.goTo('Dashboard');
     expect(await dashboardPage.kpiValue("Today's bookings")).toBe(seededCount + 1);
 
-    // Reset from the Demo Mode badge (top-bar.tsx), confirming the destructive dialog.
+    // Reset now lives only in Settings (src/components/settings/reset-demo-section.tsx) - the
+    // top bar's Demo Mode badge and its reset icon button were removed (account identity and
+    // reset both moved off the top bar to avoid duplicating the rail/Settings).
+    await appShell.goTo('Settings');
     await authenticatedPage.getByRole('button', { name: /reset demo data/i }).click();
     await authenticatedPage
       .getByRole('dialog', { name: /reset demo data\?/i })
       .getByRole('button', { name: /^reset$/i })
       .click();
 
+    await appShell.goTo('Dashboard');
     await expect
       .poll(() => dashboardPage.kpiValue("Today's bookings"), { timeout: 10_000 })
       .toBe(seededCount);

@@ -5,6 +5,7 @@ import { Dialog as DialogPrimitive } from "radix-ui"
 import { X } from "lucide-react"
 
 import { cn } from "@/lib/cn"
+import { useMessages } from "@/hooks/use-messages"
 
 // docs/03 section 11 "Overlays". Motion here is plain transition + data-state, not a keyframe
 // "animate-in" library: Radix's Presence already waits for a running CSS transition to finish
@@ -79,6 +80,7 @@ function DialogContent({
   position?: "center" | "top"
   showCloseButton?: boolean
 }) {
+  const m = useMessages()
   return (
     <DialogPortal>
       <DialogOverlay />
@@ -112,7 +114,7 @@ function DialogContent({
           {showCloseButton && (
             <DialogPrimitive.Close
               data-slot="dialog-close"
-              aria-label="Close"
+              aria-label={m.common.close}
               className="absolute top-3 right-3 flex h-10 w-10 items-center justify-center rounded-pill text-text-secondary transition-colors duration-[var(--duration-base)] ease-out hover:bg-surface-muted"
             >
               <X aria-hidden="true" className="h-[18px] w-[18px]" />

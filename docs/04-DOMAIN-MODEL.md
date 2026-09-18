@@ -240,7 +240,11 @@ export interface BookingRow extends Booking {
 export interface CustomerActivityEntry {
   id: string;
   kind: ActivityKind;
-  label: string;             // 'Attended Functional Training'
+  className: string | null;  // structured operand; null only for 'joined'. i18n phase 1: `label`
+                              // (a fixed English sentence) was dropped for the same reason
+                              // WeeklyBookingPoint.label was - the domain layer may not pick a
+                              // locale. activity-timeline.tsx assembles the sentence from
+                              // `kind` + `className` through the dictionary.
   at: ISODateTime;
   sessionId: string | null;
 }
@@ -257,9 +261,12 @@ export interface DashboardKpis {
 
 export interface WeeklyBookingPoint {
   date: ISODate;
-  label: string;   // 'Mon'
   bookings: number;
 }
+// `label` (a formatted weekday name) was dropped in the i18n phase 1 pass: producing it inside
+// the selector forced the domain layer to pick a locale, which breaks section 1's dependency
+// rule. Consumers derive the weekday label from `date` in the active language instead
+// (src/hooks/use-date-locale.ts).
 
 export interface ClassOccupancyPoint {
   classTypeId: string;

@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { SectionCard } from '@/components/shared/section-card';
+import { useMessages } from '@/hooks/use-messages';
 
 type NotificationsValues = StudioSettings['notifications'];
 
@@ -25,6 +26,7 @@ interface NotificationsSectionProps {
 const REMINDER_HOUR_OPTIONS = [1, 2, 6, 12, 24, 48] as const;
 
 export function NotificationsSection({ notifications, onSave }: NotificationsSectionProps) {
+  const m = useMessages();
   const {
     handleSubmit,
     control,
@@ -41,21 +43,19 @@ export function NotificationsSection({ notifications, onSave }: NotificationsSec
 
   function onSubmit(values: NotificationsValues) {
     onSave(values);
-    toast.success('Notification settings saved.');
+    toast.success(m.settings.notifications.savedToast);
   }
 
   return (
-    <SectionCard title="Notifications">
+    <SectionCard title={m.settings.notifications.title}>
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-5">
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between gap-4 rounded-field border border-border p-3">
             <div className="flex flex-col gap-0.5">
               <Label htmlFor="notif-whatsapp" className="text-sm font-medium text-ink">
-                WhatsApp confirmations
+                {m.settings.notifications.whatsappLabel}
               </Label>
-              <p className="text-sm text-text-secondary">
-                Send a simulated WhatsApp message when a booking is confirmed.
-              </p>
+              <p className="text-sm text-text-secondary">{m.settings.notifications.whatsappDescription}</p>
             </div>
             <Controller
               control={control}
@@ -74,9 +74,9 @@ export function NotificationsSection({ notifications, onSave }: NotificationsSec
           <div className="flex items-center justify-between gap-4 rounded-field border border-border p-3">
             <div className="flex flex-col gap-0.5">
               <Label htmlFor="notif-email" className="text-sm font-medium text-ink">
-                Email confirmations
+                {m.settings.notifications.emailLabel}
               </Label>
-              <p className="text-sm text-text-secondary">Send a confirmation email when a booking is made.</p>
+              <p className="text-sm text-text-secondary">{m.settings.notifications.emailDescription}</p>
             </div>
             <Controller
               control={control}
@@ -94,7 +94,7 @@ export function NotificationsSection({ notifications, onSave }: NotificationsSec
         </div>
 
         <Field className="max-w-xs">
-          <FieldLabel htmlFor="notif-reminder">Reminder timing</FieldLabel>
+          <FieldLabel htmlFor="notif-reminder">{m.settings.notifications.reminderTimingLabel}</FieldLabel>
           <Controller
             control={control}
             name="reminderHoursBefore"
@@ -105,12 +105,12 @@ export function NotificationsSection({ notifications, onSave }: NotificationsSec
                 onValueChange={(value) => field.onChange(Number(value))}
               >
                 <SelectTrigger id="notif-reminder" className="w-full">
-                  <SelectValue placeholder="Select a reminder time" />
+                  <SelectValue placeholder={m.settings.notifications.reminderTimingPlaceholder} />
                 </SelectTrigger>
                 <SelectContent>
                   {REMINDER_HOUR_OPTIONS.map((hours) => (
                     <SelectItem key={hours} value={String(hours)}>
-                      {hours} {hours === 1 ? 'hour' : 'hours'} before
+                      {m.settings.notifications.reminderHoursOption(hours)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -121,7 +121,7 @@ export function NotificationsSection({ notifications, onSave }: NotificationsSec
 
         <div className="flex justify-end">
           <Button type="submit" variant="primary" disabled={isSubmitting}>
-            Save changes
+            {m.settings.notifications.saveButton}
           </Button>
         </div>
       </form>

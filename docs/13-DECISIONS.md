@@ -485,3 +485,31 @@ Automatic promotion was rejected: a demo that silently reshuffles bookings while
 
 ### Consequences
 The product's own copy becomes true. The waitlist stops being a label and becomes a demonstrable behaviour, which is one of the few places the demo can show judgement rather than just data.
+
+---
+
+## ADR-025 - Spanish and English from one typed dictionary, no locale in the route
+
+### Context
+The client asked for the demo in both Spanish and English, with Spanish as what a first-time viewer sees. The app is frontend-only and client-first (ADR-004): no server data fetching, no route handlers, no server actions. CLAUDE.md also pins the route list, and every sidebar link is asserted by the Playwright suite.
+
+### Alternatives considered
+1. `next-intl`. The standard App Router answer, but its routing model puts the locale in the path (`/es/dashboard`), which multiplies every route in the pinned list and rewrites every internal link. Rejected on that alone.
+2. `react-i18next` with a `t('a.b.c')` key-path API. No route impact, but a mistyped key is a runtime miss that renders the key itself, and nothing forces the two languages to stay in step.
+3. A typed dictionary in the repo, selected by a client-side locale store.
+
+### Chosen solution
+Option 3, with three properties that carry the decision:
+
+- **Spanish is the source of truth for the dictionary's shape.** `Messages` is derived from the Spanish object, and the English object is declared `satisfies Messages`. A key that is missing, extra or misspelled in English is a compile error, not an English string leaking into the Spanish screen. This is the whole reason for hand-rolling rather than taking a library.
+- **Call sites read properties, not key paths.** `const m = useMessages()` then `m.dashboard.kpis.occupancy`. Everything is autocompleted and a typo fails the build. Interpolation and plurals are plain functions in the dictionary (`m.common.bookingCount(3)`), so each language keeps its own plural rules in its own file instead of a shared template mini-language.
+- **One namespace file per screen area**, composed by an index. This is what let the translation run as parallel tasks without two agents editing the same file.
+
+**The locale is a viewer preference, not demo data.** It lives in its own store, persisted under `180f.ui.locale`, read after mount and never during render, exactly like `sidebarCollapsed` (docs/03 section 14.4) - so there is no hydration mismatch. It deliberately does not live in `StudioSettings`, or "Reset demo data" (ADR-022) would throw the language back to Spanish in the middle of a demo. The control renders in Settings anyway, because that is where a viewer looks for it.
+
+**Dates are locale-aware separately from copy.** `useDateLocale()` returns the date-fns locale plus that locale's display format strings, because the English formats do not transfer - `'MMM d, yyyy'` renders "sept 17, 2026" in Spanish where the natural form is "17 sept 2026". `src/lib/dates.ts` stays locale-free: the seed generator and the selectors depend on it, and the domain must not learn about language.
+
+### Consequences
+- **No layer below the components may build a sentence.** Selectors, hooks, stores, services and seed data emit structured, locale-free data - a kind or code plus its operands - and the component assembles the sentence through the dictionary. `WeeklyBookingPoint.label` and `CustomerActivityEntry.label` were removed from the domain for this reason. Any new user-facing string manufactured outside a component is a defect, because it can only ever be English.
+- The Playwright suite pins English by seeding `180f.ui.locale` before the app boots. The specs stay readable against the English-language master plan, and Spanish remains the app's runtime default.
+- Static Next.js metadata (browser tab titles) resolves before the client locale store exists, so it stays English. Accepted: no client-side alternative exists in this architecture that is not a hack.

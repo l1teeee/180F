@@ -11,38 +11,37 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { SectionCard } from '@/components/shared/section-card';
+import { useMessages } from '@/hooks/use-messages';
 import { useDemoRuntimeStore } from '@/stores/demo-runtime.store';
 
 export function ResetDemoSection() {
+  const m = useMessages();
   const resetDemoData = useDemoRuntimeStore((state) => state.resetDemoData);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   async function handleReset() {
     await resetDemoData();
-    toast.success('Demo data has been reset.');
+    toast.success(m.settings.resetDemo.successToast);
   }
 
   return (
-    <SectionCard title="Demo data">
+    <SectionCard title={m.settings.resetDemo.title}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-col gap-0.5">
-          <p className="text-sm font-medium text-ink">Reset demo data</p>
-          <p className="text-sm text-text-secondary">
-            Discards every booking, edit and message made in this session and reseeds today&apos;s demo from
-            scratch. Use this before a fresh run-through.
-          </p>
+          <p className="text-sm font-medium text-ink">{m.settings.resetDemo.label}</p>
+          <p className="text-sm text-text-secondary">{m.settings.resetDemo.description}</p>
         </div>
         <Button type="button" variant="secondary" onClick={() => setConfirmOpen(true)}>
           <RotateCcw aria-hidden="true" />
-          Reset demo data
+          {m.settings.resetDemo.button}
         </Button>
       </div>
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
-        title="Reset demo data?"
-        description="This cannot be undone. Every booking, edit and message made in this session will be discarded and today's demo will reseed from scratch."
-        confirmLabel="Reset"
+        title={m.settings.resetDemo.confirmTitle}
+        description={m.settings.resetDemo.confirmDescription}
+        confirmLabel={m.settings.resetDemo.confirmButton}
         destructive
         onConfirm={handleReset}
       />

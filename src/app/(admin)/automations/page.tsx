@@ -10,9 +10,11 @@ import { ErrorState } from '@/components/shared/error-state';
 import { LoadingSkeleton } from '@/components/shared/loading-skeleton';
 import { useAutomationsList } from '@/hooks/use-automations-list';
 import { useDemoStatus } from '@/hooks/use-demo-status';
+import { useMessages } from '@/hooks/use-messages';
 import { useDemoRuntimeStore } from '@/stores/demo-runtime.store';
 
 export default function AutomationsPage() {
+  const m = useMessages();
   const status = useDemoStatus();
   const error = useDemoRuntimeStore((state) => state.error);
   const retryHydration = useDemoRuntimeStore((state) => state.retryHydration);
@@ -29,8 +31,8 @@ export default function AutomationsPage() {
   if (status === 'error') {
     return (
       <div className="flex flex-col gap-6">
-        <PageHeader title="Automations" subtitle="Simulated WhatsApp messaging triggers." />
-        <ErrorState description={error ?? "We couldn't load your automations."} onRetry={retryHydration} />
+        <PageHeader title={m.automations.pageTitle} subtitle={m.automations.pageSubtitle} />
+        <ErrorState description={error ?? m.automations.loadErrorFallback} onRetry={retryHydration} />
       </div>
     );
   }
@@ -38,7 +40,7 @@ export default function AutomationsPage() {
   if (status !== 'ready' || !list) {
     return (
       <div className="flex flex-col gap-6">
-        <PageHeader title="Automations" subtitle="Simulated WhatsApp messaging triggers." />
+        <PageHeader title={m.automations.pageTitle} subtitle={m.automations.pageSubtitle} />
         <LoadingSkeleton variant="card" count={4} />
         <LoadingSkeleton variant="chart" />
       </div>
@@ -49,7 +51,7 @@ export default function AutomationsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Automations" subtitle="Simulated WhatsApp messaging triggers." />
+      <PageHeader title={m.automations.pageTitle} subtitle={m.automations.pageSubtitle} />
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
         {list.automations.map((automation) => {
@@ -64,7 +66,7 @@ export default function AutomationsPage() {
                 className="w-full"
                 onClick={() => setSelectedId(automation.id)}
               >
-                {isSelected ? 'Previewing this message' : 'Preview message'}
+                {isSelected ? m.automations.previewingButton : m.automations.previewButton}
               </Button>
             </div>
           );

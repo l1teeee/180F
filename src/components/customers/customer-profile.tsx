@@ -1,14 +1,17 @@
+'use client';
+
 // docs/07-COMPONENT-ARCHITECTURE.md section 4: header (avatar, "Customer XX", status), contact
 // info, membership card - the content of the left SectionCard on /customers/[id] (docs/06
-// section 3.6). Purely presentational (props in, JSX out, no hooks), so no 'use client' directive
-// of its own - same convention as shared/section-card.tsx and shared/status-badge.tsx.
+// section 3.6). Needs 'use client' for useMessages/useDateLocale.
 import { Calendar, CreditCard, Mail, Phone, Wallet, type LucideIcon } from 'lucide-react';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { AvatarBlobatar } from '@/components/ui/avatar';
 import type { AccentToken, CustomerWithStats, MembershipPlan } from '@/domain/types';
+import { useDateLocale } from '@/hooks/use-date-locale';
+import { useMessages } from '@/hooks/use-messages';
+import type { Messages } from '@/i18n/messages';
 import { accentForCustomerId, paletteForAccent } from '@/lib/avatar';
 import { cn } from '@/lib/cn';
-import { formatDisplayDate } from '@/lib/dates';
 import { formatCurrency } from '@/lib/format';
 
 export interface CustomerProfileProps {
@@ -53,30 +56,50 @@ const MEMBERSHIP_CARD_TEXT: Record<AccentToken, string> = {
   blue: 'text-blue-text',
 };
 
-function MembershipCard({ membership, remainingCredits }: { membership: MembershipPlan; remainingCredits: number | null }) {
+function MembershipCard({
+  membership,
+  remainingCredits,
+  m,
+}: {
+  membership: MembershipPlan;
+  remainingCredits: number | null;
+  m: Messages;
+}) {
   return (
     <div className={cn('flex flex-col gap-3 rounded-card-sm border border-border-soft p-[18px]', MEMBERSHIP_CARD_BG[membership.accent])}>
       <div className="flex items-center justify-between gap-3">
         <span className={cn('text-[15px] font-semibold', MEMBERSHIP_CARD_TEXT[membership.accent])}>{membership.name}</span>
         <span className="text-sm font-semibold text-ink tabular-nums">
           {formatCurrency(membership.monthlyPrice)}
-          <span className="text-xs font-medium text-text-secondary"> /mo</span>
+          <span className="text-xs font-medium text-text-secondary"> {m.customers.detail.profile.perMonthUnit}</span>
         </span>
       </div>
-      <p className="text-sm text-ink">{membership.classLimit === null ? 'Unlimited classes' : `${membership.classLimit} classes / month`}</p>
+      <p className="text-sm text-ink">
+        {membership.classLimit === null
+          ? m.customers.detail.profile.unlimitedClasses
+          : m.customers.detail.profile.classesPerMonth(membership.classLimit)}
+      </p>
+      {/* membership.benefits (src/data/memberships.ts) holds stable keys, not sentences - the
+          fallback to the raw key covers an unrecognised one defensively rather than rendering
+          blank (it should never actually trigger against the seeded catalog). */}
       <ul className="flex flex-col gap-1 text-xs text-text-secondary">
         {membership.benefits.map((benefit) => (
-          <li key={benefit}>{benefit}</li>
+          <li key={benefit}>{m.memberships.benefitLabel[benefit as keyof typeof m.memberships.benefitLabel] ?? benefit}</li>
         ))}
       </ul>
       <div className="border-t border-border-soft pt-2 text-xs font-semibold text-ink">
-        {remainingCredits === null ? 'Unlimited credits remaining' : `${remainingCredits} credits remaining this month`}
+        {remainingCredits === null
+          ? m.customers.detail.profile.unlimitedCreditsRemaining
+          : m.customers.detail.profile.creditsRemainingThisMonth(remainingCredits)}
       </div>
     </div>
   );
 }
 
 export function CustomerProfile({ customer }: CustomerProfileProps) {
+  const m = useMessages();
+  const { formatDisplayDate } = useDateLocale();
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center gap-4">
@@ -90,23 +113,23 @@ export function CustomerProfile({ customer }: CustomerProfileProps) {
         />
         <div className="flex flex-col gap-1.5">
           <h1 className="text-[20px] leading-tight font-[650] text-ink">{customer.name}</h1>
-          <StatusBadge status={customer.status} />
+          <StatusBadge status={customer.status} label={m.customers.status[customer.status]} />
         </div>
       </div>
 
       <div className="flex flex-col gap-4">
-        <InfoRow icon={Mail} label="Email" value={customer.email} />
-        <InfoRow icon={Phone} label="Phone" value={customer.phone} />
-        <InfoRow icon={Calendar} label="Member since" value={formatDisplayDate(customer.joinedAt)} />
-        <InfoRow icon={CreditCard} label="Membership" value={customer.membership.name} />
+        <InfoRow icon={Mail} label={m.customers.detail.profile.email} value={customer.email} />
+        <InfoRow icon={Phone} label={m.customers.detail.profile.phone} value={customer.phone} />
+        <InfoRow icon={Calendar} label={m.customers.detail.profile.memberSince} value={formatDisplayDate(customer.joinedAt)} />
+        <InfoRow icon={CreditCard} label={m.customers.detail.profile.membership} value={customer.membership.name} />
         <InfoRow
           icon={Wallet}
-          label="Remaining credits"
-          value={customer.remainingCredits === null ? 'Unlimited' : String(customer.remainingCredits)}
+          label={m.customers.detail.profile.remainingCredits}
+          value={customer.remainingCredits === null ? m.customers.detail.profile.unlimited : String(customer.remainingCredits)}
         />
       </div>
 
-      <MembershipCard membership={customer.membership} remainingCredits={customer.remainingCredits} />
+      <MembershipCard membership={customer.membership} remainingCredits={customer.remainingCredits} m={m} />
     </div>
   );
 }

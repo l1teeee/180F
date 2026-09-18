@@ -6,15 +6,7 @@
 // them in the page layout), so this renders TabsList/TabsTrigger only, no TabsContent.
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BOOKINGS_TAB_KEYS, type BookingsTabKey } from '@/hooks/use-bookings-tab-counts';
-import { BOOKING_STATUS_STYLE } from '@/domain/constants';
-
-const TAB_LABEL: Record<BookingsTabKey, string> = {
-  all: 'All',
-  confirmed: BOOKING_STATUS_STYLE.confirmed.label,
-  pending: BOOKING_STATUS_STYLE.pending.label,
-  cancelled: BOOKING_STATUS_STYLE.cancelled.label,
-  waitlist: BOOKING_STATUS_STYLE.waitlist.label,
-};
+import { useMessages } from '@/hooks/use-messages';
 
 export interface StatusTabsProps {
   value: BookingsTabKey;
@@ -23,6 +15,17 @@ export interface StatusTabsProps {
 }
 
 export function StatusTabs({ value, onValueChange, counts }: StatusTabsProps) {
+  const m = useMessages();
+  // Keyed by the domain id, never a second status->colour map (CLAUDE.md rule 6 / docs/07
+  // section 7 anti-patterns): status-styles.ts still owns the accent, this only owns the copy.
+  const TAB_LABEL: Record<BookingsTabKey, string> = {
+    all: m.bookings.tabs.all,
+    confirmed: m.bookings.bookingStatusLabel.confirmed,
+    pending: m.bookings.bookingStatusLabel.pending,
+    cancelled: m.bookings.bookingStatusLabel.cancelled,
+    waitlist: m.bookings.bookingStatusLabel.waitlist,
+  };
+
   return (
     <Tabs value={value} onValueChange={(next) => onValueChange(next as BookingsTabKey)}>
       {/* Horizontally scrollable at 390px (docs/06 section 3.4 responsive row) rather than

@@ -6,14 +6,17 @@ import type { ReactNode } from 'react';
 import { Toaster } from '@/components/ui/sonner';
 import { AuthContextProvider } from '@/services/auth/auth-context';
 import { DemoDataProvider } from './demo-data-provider';
+import { LocaleProvider } from './locale-provider';
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
-    <AuthContextProvider>
-      <DemoDataProvider>
-        {children}
-        <Toaster position="top-right" />
-      </DemoDataProvider>
-    </AuthContextProvider>
+    <LocaleProvider>
+      <AuthContextProvider>
+        <DemoDataProvider>
+          {children}
+          <Toaster position="top-right" />
+        </DemoDataProvider>
+      </AuthContextProvider>
+    </LocaleProvider>
   );
 }

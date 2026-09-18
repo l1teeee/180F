@@ -6,18 +6,20 @@ import { PageHeader } from '@/components/layout/page-header';
 import { ErrorState } from '@/components/shared/error-state';
 import { LoadingSkeleton } from '@/components/shared/loading-skeleton';
 import { useClassesCatalog } from '@/hooks/use-classes-catalog';
+import { useMessages } from '@/hooks/use-messages';
 import { useDemoRuntimeStore } from '@/stores/demo-runtime.store';
 
 export default function ClassesPage() {
+  const m = useMessages();
   const status = useDemoRuntimeStore((state) => state.status);
   const retryHydration = useDemoRuntimeStore((state) => state.retryHydration);
   const catalog = useClassesCatalog();
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Classes" subtitle="The full class catalog and weekly demand." />
+      <PageHeader title={m.classes.pageTitle} subtitle={m.classes.pageSubtitle} />
       {status === 'error' ? (
-        <ErrorState onRetry={retryHydration} />
+        <ErrorState title={m.classes.errorTitle} onRetry={retryHydration} />
       ) : status !== 'ready' || !catalog ? (
         <LoadingSkeleton
           variant="card"

@@ -8,6 +8,7 @@ import { ArrowLeft } from 'lucide-react';
 import { ErrorState } from '@/components/shared/error-state';
 import { LoadingSkeleton } from '@/components/shared/loading-skeleton';
 import { useInstructorDetail } from '@/hooks/use-instructor-detail';
+import { useMessages } from '@/hooks/use-messages';
 import { useDemoRuntimeStore } from '@/stores/demo-runtime.store';
 import { InstructorDetail } from './instructor-detail';
 
@@ -26,12 +27,13 @@ function InstructorDetailSkeleton() {
 }
 
 export function InstructorDetailView({ instructorId }: { instructorId: string }) {
+  const m = useMessages();
   const status = useDemoRuntimeStore((state) => state.status);
   const retryHydration = useDemoRuntimeStore((state) => state.retryHydration);
   const demoToday = useDemoRuntimeStore((state) => state.demoToday);
   const detail = useInstructorDetail(instructorId);
 
-  if (status === 'error') return <ErrorState onRetry={retryHydration} />;
+  if (status === 'error') return <ErrorState title={m.instructors.errorTitle} onRetry={retryHydration} />;
   if (status !== 'ready') return <InstructorDetailSkeleton />;
   // demoToday is always set alongside status === 'ready' (demo-runtime.store.ts hydrateDemo) -
   // checked here only so TypeScript narrows it from ISODate | null for the prop below.
@@ -44,7 +46,7 @@ export function InstructorDetailView({ instructorId }: { instructorId: string })
         className="inline-flex w-fit items-center gap-1.5 text-sm font-semibold text-text-secondary hover:text-ink"
       >
         <ArrowLeft aria-hidden="true" className="size-4" />
-        Instructors
+        {m.instructors.backToInstructors}
       </Link>
 
       <InstructorDetail

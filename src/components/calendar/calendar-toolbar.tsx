@@ -6,14 +6,9 @@
 // view.tsx wires the two together, so this component only ever calls the callbacks it is given.
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useMessages } from '@/hooks/use-messages';
 
 export type CalendarViewName = 'timeGridWeek' | 'dayGridMonth' | 'timeGridDay';
-
-const VIEW_OPTIONS: { view: CalendarViewName; label: string }[] = [
-  { view: 'timeGridWeek', label: 'Week' },
-  { view: 'dayGridMonth', label: 'Month' },
-  { view: 'timeGridDay', label: 'Day' },
-];
 
 export interface CalendarToolbarProps {
   view: CalendarViewName;
@@ -25,17 +20,25 @@ export interface CalendarToolbarProps {
 }
 
 export function CalendarToolbar({ view, onViewChange, rangeTitle, onToday, onPrev, onNext }: CalendarToolbarProps) {
+  const m = useMessages();
+
+  const viewOptions: { view: CalendarViewName; label: string }[] = [
+    { view: 'timeGridWeek', label: m.calendar.toolbar.week },
+    { view: 'dayGridMonth', label: m.calendar.toolbar.month },
+    { view: 'timeGridDay', label: m.calendar.toolbar.day },
+  ];
+
   return (
     <div className="flex flex-wrap items-center gap-3">
       <div className="flex items-center gap-2">
-        <Button type="button" variant="icon" aria-label="Previous period" onClick={onPrev}>
+        <Button type="button" variant="icon" aria-label={m.calendar.toolbar.previousPeriod} onClick={onPrev}>
           <ChevronLeft aria-hidden="true" />
         </Button>
-        <Button type="button" variant="icon" aria-label="Next period" onClick={onNext}>
+        <Button type="button" variant="icon" aria-label={m.calendar.toolbar.nextPeriod} onClick={onNext}>
           <ChevronRight aria-hidden="true" />
         </Button>
         <Button type="button" variant="secondary" onClick={onToday}>
-          Today
+          {m.calendar.toolbar.today}
         </Button>
         <span className="pl-1 text-sm font-semibold whitespace-nowrap text-ink">{rangeTitle}</span>
       </div>
@@ -45,10 +48,10 @@ export function CalendarToolbar({ view, onViewChange, rangeTitle, onToday, onPre
           in the same row, functioning as a small segmented control. */}
       <div
         role="group"
-        aria-label="Calendar view"
+        aria-label={m.calendar.toolbar.viewGroupLabel}
         className="flex items-center gap-1 rounded-field bg-surface-muted p-1"
       >
-        {VIEW_OPTIONS.map((option) => (
+        {viewOptions.map((option) => (
           <Button
             key={option.view}
             type="button"

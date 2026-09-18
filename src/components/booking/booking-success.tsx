@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { cn } from "@/lib/cn"
 import type { Booking, ClassType, SessionWithOccupancy } from "@/domain/types"
-import { formatDisplayDate, formatDisplayTime } from "@/lib/dates"
+import { useDateLocale } from "@/hooks/use-date-locale"
+import { useMessages } from "@/hooks/use-messages"
 import { escapeIcsText, foldIcsLine, formatIcsUtcTimestamp } from "@/lib/ics"
 import { useSettingsStore } from "@/stores/settings.store"
 
@@ -63,6 +64,8 @@ export function BookingSuccess({
   session: SessionWithOccupancy
   onBookAnother: () => void
 }) {
+  const m = useMessages()
+  const { formatDisplayDate, formatDisplayTime } = useDateLocale()
   const address = useSettingsStore((state) => state.settings?.general.address)
   const timezone = useSettingsStore((state) => state.settings?.general.timezone)
   const [entered, setEntered] = useState(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches)
@@ -106,42 +109,42 @@ export function BookingSuccess({
 
       <div className="flex flex-col items-center gap-2">
         <h1 tabIndex={-1} className="text-[22px] font-bold tracking-tight text-ink outline-none">
-          Your class is booked!
+          {m.publicBooking.success.heading}
         </h1>
         <p className="flex flex-wrap items-center justify-center gap-2 text-sm text-text-secondary">
-          <span>Your confirmation has been sent by WhatsApp.</span>
-          <Badge variant="neutralBrand">Simulated</Badge>
+          <span>{m.publicBooking.success.confirmationSent}</span>
+          <Badge variant="neutralBrand">{m.publicBooking.success.simulatedBadge}</Badge>
         </p>
       </div>
 
       <Card className="w-full gap-3 text-left">
         <div className="flex items-center justify-between gap-3">
-          <span className="text-sm text-text-secondary">Class</span>
+          <span className="text-sm text-text-secondary">{m.publicBooking.success.classLabel}</span>
           <span className="text-[15px] font-semibold text-ink">{classType.name}</span>
         </div>
         <div className="flex items-center justify-between gap-3">
-          <span className="text-sm text-text-secondary">Date</span>
+          <span className="text-sm text-text-secondary">{m.publicBooking.success.dateLabel}</span>
           <span className="text-[15px] font-semibold text-ink">{formatDisplayDate(session.date)}</span>
         </div>
         <div className="flex items-center justify-between gap-3">
-          <span className="text-sm text-text-secondary">Time</span>
+          <span className="text-sm text-text-secondary">{m.publicBooking.success.timeLabel}</span>
           <span className="text-[15px] font-semibold text-ink">{formatDisplayTime(session.startTime)}</span>
         </div>
         {address && (
           <div className="flex items-center justify-between gap-3">
-            <span className="text-sm text-text-secondary">Location</span>
+            <span className="text-sm text-text-secondary">{m.publicBooking.success.locationLabel}</span>
             <span className="text-[15px] font-semibold text-ink">{address}</span>
           </div>
         )}
         {detailsOpen && (
           <div className="flex flex-col gap-3 border-t border-border pt-3">
             <div className="flex items-center justify-between gap-3">
-              <span className="text-sm text-text-secondary">Booking ID</span>
+              <span className="text-sm text-text-secondary">{m.publicBooking.success.bookingIdLabel}</span>
               <span className="text-sm font-semibold text-ink">{booking.id}</span>
             </div>
             <div className="flex items-center justify-between gap-3">
-              <span className="text-sm text-text-secondary">Status</span>
-              <Badge variant="positive">Confirmed</Badge>
+              <span className="text-sm text-text-secondary">{m.publicBooking.success.statusLabel}</span>
+              <Badge variant="positive">{m.publicBooking.bookingStatusLabel.confirmed}</Badge>
             </div>
           </div>
         )}
@@ -150,7 +153,7 @@ export function BookingSuccess({
       <div className="flex w-full flex-col gap-2.5">
         <Button type="button" variant="secondary" className="w-full" onClick={handleAddToCalendar}>
           <CalendarPlus className="size-4" aria-hidden="true" />
-          Add to calendar
+          {m.publicBooking.success.addToCalendar}
         </Button>
         <Button
           type="button"
@@ -159,10 +162,10 @@ export function BookingSuccess({
           aria-expanded={detailsOpen}
           onClick={() => setDetailsOpen((open) => !open)}
         >
-          {detailsOpen ? "Hide booking" : "View booking"}
+          {detailsOpen ? m.publicBooking.success.hideBooking : m.publicBooking.success.viewBooking}
         </Button>
         <Button type="button" variant="ink" className="w-full" onClick={onBookAnother}>
-          Book another class
+          {m.publicBooking.success.bookAnother}
         </Button>
       </div>
     </div>

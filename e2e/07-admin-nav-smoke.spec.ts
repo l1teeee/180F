@@ -10,11 +10,15 @@
 import { test, expect } from '@playwright/test';
 import { ADMIN_ROUTES } from './pages/app-shell.page';
 import { LoginPage } from './pages/login.page';
-import { waitForDemoReady } from './fixtures/hydration';
+import { seedEnglishLocale, waitForDemoReady } from './fixtures/hydration';
 import { DEMO_ADMIN_EMAIL, DEMO_ADMIN_PASSWORD } from './fixtures/auth';
 
 test.describe('admin navigation smoke test', () => {
   test('every sidebar route loads without a console error or a 404/500 response', async ({ page }) => {
+    // i18n phase 1: this spec bypasses fixtures/hydration.ts's own `page` fixture (see the file
+    // header comment), so English has to be seeded here too - see E2E_LOCALE_STORAGE_KEY's
+    // comment in fixtures/hydration.ts for why this suite pins English on purpose.
+    await seedEnglishLocale(page);
     const loginResponse = await page.goto('/login').catch(() => null);
     if (!loginResponse || loginResponse.status() === 404) {
       test.skip(true, 'Skipping: /login does not exist yet. See CLAUDE.md Routes and master plan section 16.');

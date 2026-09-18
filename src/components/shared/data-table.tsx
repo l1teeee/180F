@@ -8,6 +8,7 @@ import { useState, type KeyboardEvent, type ReactNode } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useMessages } from '@/hooks/use-messages';
 import { cn } from '@/lib/cn';
 
 export interface DataTableColumn<Row> {
@@ -78,6 +79,7 @@ export function DataTable<Row>({
   emptyState,
   onRowClick,
 }: DataTableProps<Row>) {
+  const m = useMessages();
   const [page, setPage] = useState(0);
 
   if (rows.length === 0) {
@@ -148,15 +150,12 @@ export function DataTable<Row>({
 
       {pageCount > 1 ? (
         <div className="flex items-center justify-between gap-3 pt-1">
-          <span className="text-sm text-text-secondary">
-            Page <span className="tabular-nums text-ink">{clampedPage + 1}</span> of{' '}
-            <span className="tabular-nums text-ink">{pageCount}</span>
-          </span>
+          <span className="text-sm text-text-secondary tabular-nums">{m.common.pageOf(clampedPage + 1, pageCount)}</span>
           <div className="flex items-center gap-2">
             <Button
               type="button"
               variant="icon"
-              aria-label="Previous page"
+              aria-label={m.common.previousPage}
               disabled={clampedPage === 0}
               onClick={() => setPage(clampedPage - 1)}
             >
@@ -165,7 +164,7 @@ export function DataTable<Row>({
             <Button
               type="button"
               variant="icon"
-              aria-label="Next page"
+              aria-label={m.common.nextPage}
               disabled={clampedPage >= pageCount - 1}
               onClick={() => setPage(clampedPage + 1)}
             >

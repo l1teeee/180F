@@ -21,6 +21,7 @@ import { useDashboardClassOccupancy } from '@/hooks/use-dashboard-class-occupanc
 import { useDashboardKpis } from '@/hooks/use-dashboard-kpis';
 import { useDashboardWeeklyBookings } from '@/hooks/use-dashboard-weekly-bookings';
 import { useDemoStatus } from '@/hooks/use-demo-status';
+import { useMessages } from '@/hooks/use-messages';
 import { useRecentBookings } from '@/hooks/use-recent-bookings';
 import { useUpcomingSessions } from '@/hooks/use-upcoming-sessions';
 import { useDemoRuntimeStore } from '@/stores/demo-runtime.store';
@@ -34,6 +35,7 @@ const WeeklyBookingsChart = dynamic(
 );
 
 export default function DashboardPage() {
+  const m = useMessages();
   const status = useDemoStatus();
   const hydrationError = useDemoRuntimeStore((state) => state.error);
   const retryHydration = useDemoRuntimeStore((state) => state.retryHydration);
@@ -47,7 +49,7 @@ export default function DashboardPage() {
   if (status === 'error') {
     return (
       <div className="flex flex-col gap-6">
-        <DashboardHeader greeting="Good morning" subtitle="Here's what's happening at your studio today." />
+        <DashboardHeader greeting={m.dashboard.greeting} subtitle={m.dashboard.subtitle} />
         <ErrorState description={hydrationError ?? undefined} onRetry={() => void retryHydration()} />
       </div>
     );
@@ -59,26 +61,27 @@ export default function DashboardPage() {
 
   const bookingsDeltaDirection =
     kpis.todayBookingsDeltaPct > 0 ? 'up' : kpis.todayBookingsDeltaPct < 0 ? 'down' : 'flat';
-  const bookingsDeltaLabel = `${kpis.todayBookingsDeltaPct > 0 ? '+' : ''}${Math.round(kpis.todayBookingsDeltaPct)}% vs yesterday`;
+  const signedBookingsDeltaPct = `${kpis.todayBookingsDeltaPct > 0 ? '+' : ''}${Math.round(kpis.todayBookingsDeltaPct)}`;
+  const bookingsDeltaLabel = m.dashboard.bookingsDeltaVsYesterday(signedBookingsDeltaPct);
 
   return (
     <div className="flex flex-col gap-6">
-      <DashboardHeader greeting="Good morning" subtitle="Here's what's happening at your studio today." />
+      <DashboardHeader greeting={m.dashboard.greeting} subtitle={m.dashboard.subtitle} />
 
       <div className={DASHBOARD_GRID_CLASSNAME}>
         {/* Row 1 - KPIs. Pattern 4 "Stagger" (docs/03 section 12.2), capped at 6 children. */}
         <div className="animate-fade-up lg:col-span-3" style={{ '--stagger-index': 0 } as CSSProperties}>
           <StatCard
-            label="Active members"
+            label={m.dashboard.kpis.activeMembers}
             value={kpis.activeMembers}
-            delta={{ value: `+${kpis.activeMembersDelta} this month`, direction: 'up' }}
+            delta={{ value: m.dashboard.activeMembersDelta(kpis.activeMembersDelta), direction: 'up' }}
             icon={Users}
             accent="purple"
           />
         </div>
         <div className="animate-fade-up lg:col-span-3" style={{ '--stagger-index': 1 } as CSSProperties}>
           <StatCard
-            label="Today's bookings"
+            label={m.dashboard.kpis.todayBookings}
             value={kpis.todayBookings}
             delta={{ value: bookingsDeltaLabel, direction: bookingsDeltaDirection }}
             icon={CalendarCheck}
@@ -87,7 +90,7 @@ export default function DashboardPage() {
         </div>
         <div className="animate-fade-up lg:col-span-3" style={{ '--stagger-index': 2 } as CSSProperties}>
           <StatCard
-            label="Occupancy"
+            label={m.dashboard.kpis.occupancy}
             value={Math.round(kpis.occupancyRate * 100)}
             unit="%"
             icon={Gauge}
@@ -96,9 +99,9 @@ export default function DashboardPage() {
         </div>
         <div className="animate-fade-up lg:col-span-3" style={{ '--stagger-index': 3 } as CSSProperties}>
           <StatCard
-            label="Today's classes"
+            label={m.dashboard.kpis.todayClasses}
             value={kpis.todayClasses}
-            delta={{ value: `${kpis.todayAlmostFull} nearly full`, direction: 'flat' }}
+            delta={{ value: m.dashboard.almostFullCount(kpis.todayAlmostFull), direction: 'flat' }}
             icon={Dumbbell}
             accent="yellow"
           />
@@ -106,24 +109,24 @@ export default function DashboardPage() {
 
         {/* Row 2 - weekly chart + class occupancy. */}
         <div className="lg:col-span-8">
-          <SectionCard title="Weekly bookings">
+          <SectionCard title={m.dashboard.sections.weeklyBookings}>
             <WeeklyBookingsChart data={weeklyBookings} />
           </SectionCard>
         </div>
         <div className="lg:col-span-4">
-          <SectionCard title="Class occupancy">
+          <SectionCard title={m.dashboard.sections.classOccupancy}>
             <ClassOccupancyList data={classOccupancy} />
           </SectionCard>
         </div>
 
         {/* Row 3 - upcoming classes + recent bookings. */}
         <div className="lg:col-span-4">
-          <SectionCard title="Upcoming classes">
+          <SectionCard title={m.dashboard.sections.upcomingClasses}>
             <UpcomingSessionsList sessions={upcomingSessions} />
           </SectionCard>
         </div>
         <div className="lg:col-span-8">
-          <SectionCard title="Recent bookings">
+          <SectionCard title={m.dashboard.sections.recentBookings}>
             <RecentBookingsTable rows={recentBookings} />
           </SectionCard>
         </div>

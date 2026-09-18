@@ -19,12 +19,14 @@ import { useCustomerProfile } from '@/hooks/use-customer-profile';
 import { useCustomersActivity } from '@/hooks/use-customers-activity';
 import { useCustomersFavoriteClassName } from '@/hooks/use-customers-favorite-class';
 import { useDemoStatus } from '@/hooks/use-demo-status';
+import { useMessages } from '@/hooks/use-messages';
 import { useDemoRuntimeStore } from '@/stores/demo-runtime.store';
 
 export default function CustomerDetailPage() {
   const params = useParams<{ id: string }>();
   const customerId = params.id;
   const router = useRouter();
+  const m = useMessages();
   const status = useDemoStatus();
   // Direct store reads for `error`/`demoNow`/retry (not routed through a src/hooks binding)
   // match the existing precedent in src/components/booking/booking-error-state.tsx for this
@@ -38,7 +40,7 @@ export default function CustomerDetailPage() {
   const backLink = (
     <Button type="button" variant="ghost" onClick={() => router.push('/customers')} className="-ml-3 self-start">
       <ArrowLeft aria-hidden="true" />
-      Back to customers
+      {m.customers.detail.backToCustomers}
     </Button>
   );
 
@@ -76,12 +78,12 @@ export default function CustomerDetailPage() {
           </div>
           <div className="flex flex-col gap-6 lg:col-span-8">
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              <StatCard label="Classes this month" value={0} loading />
-              <StatCard label="Attendance rate" value={0} loading />
-              <StatCard label="No-shows" value={0} loading />
-              <StatCard label="Favorite class" value={0} loading />
+              <StatCard label={m.customers.detail.stats.classesThisMonth} value={0} loading />
+              <StatCard label={m.customers.detail.stats.attendanceRate} value={0} loading />
+              <StatCard label={m.customers.detail.stats.noShows} value={0} loading />
+              <StatCard label={m.customers.detail.stats.favoriteClass} value={0} loading />
             </div>
-            <SectionCard title="Recent activity">
+            <SectionCard title={m.customers.detail.recentActivity}>
               <LoadingSkeleton variant="table-row" count={4} />
             </SectionCard>
           </div>
@@ -95,7 +97,7 @@ export default function CustomerDetailPage() {
           </div>
           <div className="flex flex-col gap-6 lg:col-span-8">
             <CustomerStats stats={profile} favoriteClassName={favoriteClassName} />
-            <SectionCard title="Recent activity">
+            <SectionCard title={m.customers.detail.recentActivity}>
               <ActivityTimeline entries={activity} demoNow={demoNow} />
             </SectionCard>
           </div>

@@ -21,8 +21,14 @@ import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { useMessages } from '@/hooks/use-messages';
 import { useAuth } from '@/services/auth/auth-context';
+import { INVALID_CREDENTIALS } from '@/services/auth/demo-auth-provider';
 
+// English messages baked into the schema are never rendered - domain schemas for the public
+// booking form live outside this namespace's write set, so both forms keep zod locale-free and
+// map field identity to translated copy at render instead (see src/i18n/dictionaries/es/auth.ts).
+// Each field here has exactly one possible failure, so the field name alone picks the key.
 const loginSchema = z.object({
   email: z.email('Enter a valid email address'),
   password: z.string().min(1, 'Enter your password'),
@@ -34,6 +40,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 export function LoginForm() {
   const { status, signIn } = useAuth();
   const router = useRouter();
+  const m = useMessages();
   const [formError, setFormError] = useState<string | null>(null);
 
   const {
@@ -59,43 +66,48 @@ export function LoginForm() {
       router.replace('/dashboard');
     } catch (err) {
       // docs/06 3.1: invalid credentials render an inline field-level error, not ErrorState.
-      setFormError(err instanceof Error ? err.message : 'Something went wrong. Try again.');
+      // DemoAuthProvider.signIn() rejects with a stable code (INVALID_CREDENTIALS), never a
+      // sentence - this is the only place that code is translated. Any other error (an
+      // unrecognised code, or SupabaseAuthProvider's own message) falls back to the generic
+      // translated copy rather than rendering blank or leaking untranslated text.
+      const code = err instanceof Error ? err.message : null;
+      setFormError(code === INVALID_CREDENTIALS ? m.auth.errors.invalidCredentials : m.auth.genericError);
     }
   }
 
   return (
     <Card className="w-full max-w-[400px]">
       <div className="flex flex-col gap-1.5">
-        <h1 className="text-[24px] font-bold tracking-[-0.02em] text-ink">Welcome back</h1>
-        <p className="text-sm text-text-secondary">Manage your classes, customers and bookings from one place.</p>
+        <h1 className="text-[24px] font-bold tracking-[-0.02em] text-ink">{m.auth.heading}</h1>
+        <p className="text-sm text-text-secondary">{m.auth.subtitle}</p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate>
         <FieldGroup>
           <Field data-invalid={!!errors.email}>
-            <FieldLabel htmlFor="email">Email</FieldLabel>
+            <FieldLabel htmlFor="email">{m.auth.emailLabel}</FieldLabel>
             <Input
               id="email"
               type="email"
               autoComplete="username"
-              placeholder="admin@demo.com"
+              placeholder={m.auth.emailPlaceholder}
               aria-invalid={!!errors.email}
               {...register('email')}
             />
-            {errors.email ? <FieldError>{errors.email.message}</FieldError> : null}
+            {errors.email ? <FieldError>{m.auth.errors.emailInvalid}</FieldError> : null}
           </Field>
 
           <Field data-invalid={!!errors.password}>
-            <FieldLabel htmlFor="password">Password</FieldLabel>
+            <FieldLabel htmlFor="password">{m.auth.passwordLabel}</FieldLabel>
             <Input
               id="password"
               type="password"
               autoComplete="current-password"
-              placeholder="demo1234"
+              placeholder={m.auth.passwordPlaceholder}
               aria-invalid={!!errors.password}
               {...register('password')}
             />
-            {errors.password ? <FieldError>{errors.password.message}</FieldError> : null}
+            {errors.password ? <FieldError>{m.auth.errors.passwordRequired}</FieldError> : null}
           </Field>
 
           <div className="flex items-center justify-between">
@@ -108,15 +120,15 @@ export function LoginForm() {
                 )}
               />
               <Label htmlFor="remember-me" className="text-sm font-medium text-ink">
-                Remember me
+                {m.auth.rememberMe}
               </Label>
             </div>
             <button
               type="button"
-              onClick={() => toast.info("Password reset isn't available in this demo.")}
+              onClick={() => toast.info(m.auth.forgotPasswordToast)}
               className="text-sm font-semibold text-purple-deep hover:underline"
             >
-              Forgot password
+              {m.auth.forgotPassword}
             </button>
           </div>
 
@@ -132,13 +144,13 @@ export function LoginForm() {
 
           <Button type="submit" variant="primary" disabled={isSubmitting} className="w-full">
             {isSubmitting ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> : null}
-            Sign in
+            {m.auth.signIn}
           </Button>
         </FieldGroup>
       </form>
 
       <p className="rounded-field bg-surface-muted px-3 py-2.5 text-center text-xs text-text-secondary">
-        Demo credentials: <span className="font-semibold text-ink">admin@demo.com</span> /{' '}
+        {m.auth.demoCredentialsLabel} <span className="font-semibold text-ink">admin@demo.com</span> /{' '}
         <span className="font-semibold text-ink">demo1234</span>
       </p>
     </Card>

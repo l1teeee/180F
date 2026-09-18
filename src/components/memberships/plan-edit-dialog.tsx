@@ -15,6 +15,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import type { MembershipPlan } from '@/domain/types';
+import { useMessages } from '@/hooks/use-messages';
+import type { Messages } from '@/i18n/messages';
 import { useCatalogStore } from '@/stores/catalog.store';
 
 export interface PlanEditDialogProps {
@@ -27,34 +29,47 @@ export interface PlanEditDialogProps {
 // inference gets awkward when a coerced/transformed field makes the resolver's input type and
 // output type diverge) - monthlyPrice and classLimit are parsed back to numbers in onSubmit,
 // the same place classLimit's blank-means-unlimited conversion already has to happen.
-const planEditSchema = z.object({
-  name: z.string().trim().min(1, 'Enter a plan name'),
-  monthlyPrice: z
-    .string()
-    .trim()
-    .refine((value) => /^\d+$/.test(value), { message: 'Enter a valid price' }),
-  // '' means unlimited (MembershipPlan.classLimit === null); otherwise a whole number > 0.
-  classLimit: z
-    .string()
-    .trim()
-    .refine((value) => value === '' || (/^\d+$/.test(value) && Number(value) > 0), {
-      message: 'Enter a whole number, or leave blank for unlimited',
-    }),
-  benefits: z.string(),
-});
+// Built per-render (not a module-level const) so validation messages follow the active locale.
+function buildPlanEditSchema(validation: Messages['memberships']['validation']) {
+  return z.object({
+    name: z.string().trim().min(1, validation.planNameRequired),
+    monthlyPrice: z
+      .string()
+      .trim()
+      .refine((value) => /^\d+$/.test(value), { message: validation.invalidPrice }),
+    // '' means unlimited (MembershipPlan.classLimit === null); otherwise a whole number > 0.
+    classLimit: z
+      .string()
+      .trim()
+      .refine((value) => value === '' || (/^\d+$/.test(value) && Number(value) > 0), {
+        message: validation.invalidClassLimit,
+      }),
+    benefits: z.string(),
+  });
+}
 
-type PlanEditFormValues = z.infer<typeof planEditSchema>;
+type PlanEditFormValues = z.infer<ReturnType<typeof buildPlanEditSchema>>;
 
-function toFormValues(plan: MembershipPlan): PlanEditFormValues {
+// Seeds the textarea with each benefit's TRANSLATED label, never the raw stored string (which
+// may be a stable key like 'guest_pass' - see src/data/memberships.ts). Editing and saving a
+// plan then writes back whatever the user typed as literal text, which renders verbatim through
+// membership-card.tsx's `?? benefit` fallback. Tradeoff, accepted deliberately: this converts a
+// plan's seeded keys into literal text in the language it was edited in, so a plan edited in
+// Spanish keeps showing Spanish after switching to English. Fine for a demo nobody edits
+// mid-presentation; a key-picker UI here would be more machinery than this screen deserves.
+function toFormValues(plan: MembershipPlan, benefitLabel: Messages['memberships']['benefitLabel']): PlanEditFormValues {
   return {
     name: plan.name,
     monthlyPrice: String(plan.monthlyPrice),
     classLimit: plan.classLimit === null ? '' : String(plan.classLimit),
-    benefits: plan.benefits.join(', '),
+    benefits: plan.benefits
+      .map((benefit) => benefitLabel[benefit as keyof typeof benefitLabel] ?? benefit)
+      .join(', '),
   };
 }
 
 export function PlanEditDialog({ plan, open, onOpenChange }: PlanEditDialogProps) {
+  const m = useMessages();
   const updatePlan = useCatalogStore((state) => state.updatePlan);
 
   const {
@@ -63,15 +78,17 @@ export function PlanEditDialog({ plan, open, onOpenChange }: PlanEditDialogProps
     reset,
     formState: { errors, isSubmitting },
   } = useForm<PlanEditFormValues>({
-    resolver: zodResolver(planEditSchema),
-    defaultValues: plan ? toFormValues(plan) : { name: '', monthlyPrice: '', classLimit: '', benefits: '' },
+    resolver: zodResolver(buildPlanEditSchema(m.memberships.validation)),
+    defaultValues: plan
+      ? toFormValues(plan, m.memberships.benefitLabel)
+      : { name: '', monthlyPrice: '', classLimit: '', benefits: '' },
   });
 
   // Re-seeds the form whenever a different plan is opened for editing (the dialog instance is
   // shared across all four cards, so it never remounts on its own).
   useEffect(() => {
-    if (plan && open) reset(toFormValues(plan));
-  }, [plan, open, reset]);
+    if (plan && open) reset(toFormValues(plan, m.memberships.benefitLabel));
+  }, [plan, open, reset, m.memberships.benefitLabel]);
 
   if (!plan) return null;
 
@@ -87,7 +104,7 @@ export function PlanEditDialog({ plan, open, onOpenChange }: PlanEditDialogProps
       classLimit: values.classLimit === '' ? null : Number(values.classLimit),
       benefits,
     });
-    toast.success('Plan updated');
+    toast.success(m.memberships.dialog.toastPlanUpdated);
     onOpenChange(false);
   }
 
@@ -95,8 +112,8 @@ export function PlanEditDialog({ plan, open, onOpenChange }: PlanEditDialogProps
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="md">
         <DialogHeader className="flex-none">
-          <DialogTitle>Edit {plan.name}</DialogTitle>
-          <DialogDescription>Changes apply immediately across the demo. No payment or billing is processed.</DialogDescription>
+          <DialogTitle>{m.memberships.dialog.title(plan.name)}</DialogTitle>
+          <DialogDescription>{m.memberships.dialog.description}</DialogDescription>
         </DialogHeader>
 
         {/* docs/03-DESIGN-SYSTEM.md section 11.2/11.3: max-height 85vh, body scrolls, header and
@@ -105,13 +122,13 @@ export function PlanEditDialog({ plan, open, onOpenChange }: PlanEditDialogProps
         <form id="plan-edit-form" onSubmit={handleSubmit(onSubmit)} noValidate className="flex-1 overflow-y-auto">
           <FieldGroup>
             <Field data-invalid={!!errors.name}>
-              <FieldLabel htmlFor="plan-name">Plan name</FieldLabel>
+              <FieldLabel htmlFor="plan-name">{m.memberships.dialog.planNameLabel}</FieldLabel>
               <Input id="plan-name" autoComplete="off" aria-invalid={!!errors.name} {...register('name')} />
               {errors.name ? <FieldError>{errors.name.message}</FieldError> : null}
             </Field>
 
             <Field data-invalid={!!errors.monthlyPrice}>
-              <FieldLabel htmlFor="plan-price">Monthly price (USD)</FieldLabel>
+              <FieldLabel htmlFor="plan-price">{m.memberships.dialog.monthlyPriceLabel}</FieldLabel>
               <Input
                 id="plan-price"
                 type="number"
@@ -126,10 +143,10 @@ export function PlanEditDialog({ plan, open, onOpenChange }: PlanEditDialogProps
             </Field>
 
             <Field data-invalid={!!errors.classLimit}>
-              <FieldLabel htmlFor="plan-class-limit">Classes per month</FieldLabel>
+              <FieldLabel htmlFor="plan-class-limit">{m.memberships.dialog.classLimitLabel}</FieldLabel>
               <Input
                 id="plan-class-limit"
-                placeholder="Leave blank for unlimited"
+                placeholder={m.memberships.dialog.classLimitPlaceholder}
                 inputMode="numeric"
                 autoComplete="off"
                 aria-invalid={!!errors.classLimit}
@@ -139,10 +156,10 @@ export function PlanEditDialog({ plan, open, onOpenChange }: PlanEditDialogProps
             </Field>
 
             <Field data-invalid={!!errors.benefits}>
-              <FieldLabel htmlFor="plan-benefits">Benefits</FieldLabel>
+              <FieldLabel htmlFor="plan-benefits">{m.memberships.dialog.benefitsLabel}</FieldLabel>
               <Input
                 id="plan-benefits"
-                placeholder="Comma-separated"
+                placeholder={m.memberships.dialog.benefitsPlaceholder}
                 autoComplete="off"
                 aria-invalid={!!errors.benefits}
                 {...register('benefits')}
@@ -154,10 +171,10 @@ export function PlanEditDialog({ plan, open, onOpenChange }: PlanEditDialogProps
 
         <DialogFooter className="flex-none">
           <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
-            Cancel
+            {m.memberships.dialog.cancel}
           </Button>
           <Button type="submit" form="plan-edit-form" variant="primary" disabled={isSubmitting}>
-            Save changes
+            {m.memberships.dialog.saveChanges}
           </Button>
         </DialogFooter>
       </DialogContent>
