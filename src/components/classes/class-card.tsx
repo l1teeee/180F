@@ -10,7 +10,7 @@ import type { CSSProperties } from 'react';
 import { AvatarGroup } from '@/components/shared/avatar-group';
 import { ACCENT_ICON_BG_CLASS, ClassIcon } from '@/components/shared/class-icon';
 import { OccupancyBar } from '@/components/shared/occupancy-bar';
-import type { AccentToken, ClassTypeWithStats, Instructor } from '@/domain/types';
+import type { ClassTypeWithStats, Instructor } from '@/domain/types';
 import { useMessages } from '@/hooks/use-messages';
 
 export interface ClassCardProps {
@@ -19,31 +19,14 @@ export interface ClassCardProps {
   index?: number; // stagger position, capped at 6 (docs/03 12.3.5) - ClassGrid passes index % 6
 }
 
-// Solid accent -> top bar class, so each card reads as its own category rather than an identical
-// white rectangle repeated eight times (docs/03 section 5 "Category tile" is the reference line
-// for this catalog, even though this card keeps the white-surface content docs/06 section 3.7
-// specifies). Duplicated from occupancy-bar.tsx's own accent map rather than imported: that file
-// lives in components/shared/, outside this task's write set.
-const ACCENT_TOP_BAR_CLASS: Record<AccentToken, string> = {
-  purple: 'bg-purple',
-  yellow: 'bg-yellow',
-  green: 'bg-green',
-  pink: 'bg-pink',
-  blue: 'bg-blue',
-};
-
 export function ClassCard({ classType, instructors, index = 0 }: ClassCardProps) {
   const m = useMessages();
   return (
     <Link
       href={`/classes/${classType.id}`}
       style={{ '--stagger-index': index } as CSSProperties}
-      className="animate-fade-up group relative flex flex-col gap-4 overflow-hidden rounded-card border border-border bg-surface p-6 pt-5 shadow-card transition-[transform,box-shadow] duration-[var(--duration-fast)] ease-out hover:-translate-y-0.5 hover:shadow-raise active:scale-[0.98] active:duration-[var(--duration-instant)]"
+      className="animate-fade-up group relative flex flex-col gap-4 rounded-card border border-border bg-surface p-6 shadow-card transition-[transform,box-shadow] duration-[var(--duration-fast)] ease-out hover:-translate-y-0.5 hover:shadow-raise active:scale-[0.98] active:duration-[var(--duration-instant)]"
     >
-      <span
-        aria-hidden="true"
-        className={`absolute inset-x-0 top-0 h-1 rounded-t-card ${ACCENT_TOP_BAR_CLASS[classType.accent]}`}
-      />
       <div className="flex items-start justify-between gap-3">
         <span
           aria-hidden="true"
