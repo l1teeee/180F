@@ -47,7 +47,10 @@ export function LoginVisualPanel() {
         >
           180
         </span>
-        <h2 className="text-2xl font-bold text-white">180 Fitness Studio</h2>
+        {/* Not a heading: this panel is decorative marketing copy that sits before the
+            form's own "Welcome back" h1 in DOM order, so a real heading here would put an h2
+            ahead of the page's only h1. */}
+        <p className="text-2xl font-bold text-white">180 Fitness Studio</p>
         <p className="text-[15px] font-medium text-white/70">
           Manage your classes, customers and bookings from one place.
         </p>

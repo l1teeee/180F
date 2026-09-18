@@ -45,12 +45,16 @@ export function DemoBadge({ className }: DemoBadgeProps) {
         </TooltipTrigger>
         <TooltipContent>{TOOLTIP_COPY}</TooltipContent>
       </Tooltip>
+      {/* Visual size stays 26px to match the adjacent pill (docs/03 section 5 "Pills and
+          badges"), but docs/03 section 10's 40px hit-target floor still applies - the ::before
+          trick already used for the booking wizard's back links (e.g. time-step.tsx) extends the
+          clickable area without changing what's drawn. */}
       <button
         type="button"
         onClick={() => setConfirmOpen(true)}
         aria-label="Reset demo data"
         title="Reset demo data"
-        className="inline-flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-pill border border-border bg-surface text-text-secondary transition-colors duration-[var(--duration-fast)] ease-out hover:bg-surface-muted hover:text-ink"
+        className="relative inline-flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-pill border border-border bg-surface text-text-secondary transition-colors duration-[var(--duration-fast)] ease-out before:absolute before:-inset-2 before:content-[''] hover:bg-surface-muted hover:text-ink"
       >
         <RotateCcw aria-hidden="true" className="h-3.5 w-3.5" />
       </button>

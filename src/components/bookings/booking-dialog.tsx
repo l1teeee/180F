@@ -152,7 +152,11 @@ export function BookingDialog({ open, onOpenChange }: BookingDialogProps) {
               <Field>
                 <FieldLabel htmlFor={`${idPrefix}-class`}>Class</FieldLabel>
                 <Select
-                  value={selectedClassTypeId ?? undefined}
+                  // '' (never undefined) so this stays a controlled Radix Select across the
+                  // reset - Radix.Select treats a value prop of undefined as "uncontrolled" and
+                  // falls back to whatever it last rendered internally, which is exactly the
+                  // stale-value bug this dialog must not have.
+                  value={selectedClassTypeId ?? ''}
                   onValueChange={(value) => {
                     setSelectedClassTypeId(value);
                     setSelectedDate(null);
@@ -176,7 +180,10 @@ export function BookingDialog({ open, onOpenChange }: BookingDialogProps) {
               <Field>
                 <FieldLabel htmlFor={`${idPrefix}-date`}>Date</FieldLabel>
                 <Select
-                  value={selectedDate ?? undefined}
+                  // Same reason as the Class select above: '' keeps this controlled through the
+                  // reset to null, so the trigger actually shows the "Select a date" placeholder
+                  // instead of the previous class's stale date text.
+                  value={selectedDate ?? ''}
                   onValueChange={(value) => setSelectedDate(value)}
                   disabled={!selectedClassTypeId || dates.length === 0}
                 >

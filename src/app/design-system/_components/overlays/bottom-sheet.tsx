@@ -112,15 +112,21 @@ function BottomSheetFields({ titleId, descriptionId, onClose }: BottomSheetField
 }
 
 export function BottomSheetSpecimen() {
+  // The 390px phone stage is wider than the page's own content column below that same
+  // breakpoint (page padding + PatternBlock padding eat into the 390px viewport before this
+  // box's own width is accounted for) - contained in its own horizontal scroll area so the
+  // fixed-width mockup never forces the whole design-system page to scroll sideways.
   return (
-    <Stage
-      label="Bottom sheet (390px phone stage)"
-      className="mx-auto h-[700px] w-[390px] rounded-[32px] border-2 border-border"
-    >
-      <div className="absolute inset-x-0 bottom-0 z-10">
-        <BottomSheetFields />
-      </div>
-    </Stage>
+    <div className="w-full overflow-x-auto">
+      <Stage
+        label="Bottom sheet (390px phone stage)"
+        className="mx-auto h-[700px] w-[390px] shrink-0 rounded-[32px] border-2 border-border"
+      >
+        <div className="absolute inset-x-0 bottom-0 z-10">
+          <BottomSheetFields />
+        </div>
+      </Stage>
+    </div>
   );
 }
 

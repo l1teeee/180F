@@ -12,7 +12,7 @@ This is a frontend-only demo (master plan 2, architecture 1, architecture 10): n
 |---|---|---|
 | 1 | Start the app | `pnpm dev`, wait for the local server to be ready. |
 | 2 | Open the right tab | Navigate to `/login`. Close any other tabs that could steal focus (notifications, email). |
-| 3 | Reset the dataset | Reload the page once. The dataset reseeds deterministically from today's date on every load (decisions ADR-005); any bookings created in a rehearsal run disappear and the studio looks freshly seeded. |
+| 3 | Reset the dataset | Open the Demo Mode badge and choose **Reset demo data**, or use the same action at the bottom of Settings. Changes now persist across reloads and tabs (ADR-022), so a reload alone no longer clears a rehearsal - the explicit reset does, and it restores the freshly seeded studio in every open tab at once. |
 | 4 | Set browser zoom | `Ctrl/Cmd + 0` — 100%, not the browser's remembered zoom level. |
 | 5 | Set window size | Maximize on a display 1440 px wide or larger, or set the browser window to exactly 1440x900. This matches the primary design target (design system 8, master plan 14). Do not present at 1280 or 1366 unless the room's screen forces it. |
 | 6 | Stage the mobile switch | Know where DevTools device mode lives (`Ctrl/Cmd + Shift + M`) before you need it live in scene 12. Pre-set a custom viewport width of 390 px — inside the "< 768 px" bracket that design system 8 defines as the mobile-first reference experience for public booking. Do not switch early; do it on camera in scene 12 so the owner sees the app respond. |
@@ -349,3 +349,11 @@ Short, direct answers for common owner questions. Say the plain-language answer 
 | Where does the data live? | Entirely in your browser's memory while the app is open. There is no server and no database behind this demo (architecture 1, 10). Reloading the page regenerates a fresh, consistent dataset from scratch — that's also why we reset it before every run. |
 | Can we change the branding? | Yes. Colors, the logo placeholder and studio details are meant to be swapped — the settings page has a Branding section for logo and colors (master plan 40), and every color in the app comes from one shared set of design tokens, so restyling it for your studio is a configuration change, not a rebuild (design system 1). |
 | What would it take to go live? | The architecture was built with this in mind: all data access already goes through a single, swappable layer, so plugging in a real backend, real auth and a real WhatsApp integration is a contained, additive project rather than a rewrite (architecture 5, decisions ADR-009, ADR-010). The roadmap in scene 18 is the shape of that project. |
+
+---
+
+## Presenting the phone and the admin side by side
+
+The strongest version of beats 12 to 17 uses two browser tabs or two windows: the public booking flow at `/book` in a narrow window sized like a phone, and the admin dashboard in a wide one. Demo state syncs between tabs within a moment (ADR-022), so when the booking is confirmed on the phone, the admin's Today's bookings figure and the bookings table update without a reload. Say so while it happens: "Nothing was refreshed. The studio's screen just knew."
+
+Rehearse it once before the meeting, then reset the demo data so the client sees a clean studio.

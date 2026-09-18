@@ -38,6 +38,48 @@ const COLUMNS: DataTableColumn<BookingRow>[] = [
   { id: 'status', header: 'Status', cell: (row) => <StatusBadge status={row.status} /> },
 ];
 
+// Below md the desktop table's seven columns plus an actions cell would either force horizontal
+// scroll or repeat as an ungainly seven-row label/value list (DataTable's generic fallback card) -
+// same composed-card shape as dashboard/recent-bookings-table.tsx's mobile card: identity + status
+// on one row, class + date/time on the next, source and the cancel action on a third.
+function BookingMobileCard({ row, onCancelRequest }: { row: BookingRow; onCancelRequest: (row: BookingRow) => void }) {
+  return (
+    <div className="flex flex-col gap-3 rounded-card-sm border border-border bg-surface p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <AvatarGroup people={[{ id: row.customer.id, name: row.customer.name, avatar: row.customer.avatar }]} max={1} size={32} />
+          <span className="truncate text-[15px] font-semibold text-ink">{row.customer.name}</span>
+        </div>
+        <StatusBadge status={row.status} />
+      </div>
+      <div className="flex items-center justify-between gap-3 text-sm text-text-secondary">
+        <span className="truncate">
+          {row.classType.name} · {row.instructor.name}
+        </span>
+        <span className="shrink-0 tabular-nums">
+          {formatDisplayDateShort(row.session.date)} · {formatDisplayTime(row.session.startTime)}
+        </span>
+      </div>
+      <div className="flex items-center justify-between gap-3">
+        <SourceBadge source={row.source} />
+        {row.status !== 'cancelled' ? (
+          <Button
+            type="button"
+            variant="icon"
+            aria-label={`Cancel booking for ${row.customer.name}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              onCancelRequest(row);
+            }}
+          >
+            <X aria-hidden="true" />
+          </Button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export function BookingsTable({ rows, onCancelRequest, onCreateBooking }: BookingsTableProps) {
   // A trailing, header-less actions column - not one of the seven data fields docs/06 lists, but
   // the acceptance criteria (task brief) explicitly requires a working cancel affordance
@@ -70,6 +112,7 @@ export function BookingsTable({ rows, onCancelRequest, onCreateBooking }: Bookin
       rows={rows}
       columns={columns}
       rowKey={(row) => row.id}
+      renderMobileCard={(row) => <BookingMobileCard row={row} onCancelRequest={onCancelRequest} />}
       emptyState={
         <EmptyState
           title="No bookings found"

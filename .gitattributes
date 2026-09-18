@@ -1,0 +1,13 @@
+# Normalise text files to LF so Windows checkouts stop reporting "LF will be replaced by CRLF"
+# on every commit - this matches what the toolchain (Next.js, Prettier, pnpm) already writes.
+* text=auto eol=lf
+
+# Binary assets: never touched by line-ending normalisation.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary

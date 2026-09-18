@@ -52,7 +52,7 @@ export function ClassDetail({ classType, instructors }: ClassDetailProps) {
             size={32}
           />
         ) : (
-          <span className="text-sm text-text-tertiary">Unassigned</span>
+          <span className="text-sm text-text-secondary">Unassigned</span>
         )}
       </div>
     </Card>

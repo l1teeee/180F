@@ -51,11 +51,29 @@ export function WhatsAppPreview({ automation }: WhatsAppPreviewProps) {
           </div>
         </div>
 
-        <div className="flex flex-col items-end gap-2">
-          <div className="max-w-[320px] rounded-card-sm rounded-tr-none bg-green-soft p-4 text-sm whitespace-pre-line text-ink shadow-card">
-            {message}
+        {/* A phone-style chat surface rather than the bubble floating alone: on a wide card the
+            bubble's own 320px cap otherwise leaves a large dead gap next to the template column,
+            and a contained "chat window" reads more deliberately as a simulation (master plan
+            33 / 66.9), not an unfinished layout. */}
+        <div className="flex flex-col justify-end gap-3 rounded-card-sm bg-surface-muted p-4">
+          <div className="flex items-center gap-2 border-b border-border pb-3">
+            <span
+              aria-hidden="true"
+              className="flex size-8 shrink-0 items-center justify-center rounded-pill bg-green-soft text-xs font-semibold text-green-text"
+            >
+              180
+            </span>
+            <div className="flex min-w-0 flex-col">
+              <span className="truncate text-sm font-semibold text-ink">180 Fitness Studio</span>
+              <span className="text-xs text-text-secondary">Simulated WhatsApp chat</span>
+            </div>
           </div>
-          <span className="text-xs text-text-secondary">Delivered</span>
+          <div className="flex flex-col items-end gap-2">
+            <div className="max-w-[320px] rounded-card-sm rounded-tr-none bg-green-soft p-4 text-sm whitespace-pre-line text-ink shadow-card">
+              {message}
+            </div>
+            <span className="text-xs text-text-secondary">Delivered</span>
+          </div>
         </div>
       </div>
 

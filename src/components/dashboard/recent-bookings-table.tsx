@@ -4,6 +4,7 @@
 // (docs/07 section 7 anti-patterns), never a second one defined here.
 import { AvatarGroup } from '@/components/shared/avatar-group';
 import { DataTable, type DataTableColumn } from '@/components/shared/data-table';
+import { EmptyState } from '@/components/shared/empty-state';
 import { SourceBadge } from '@/components/shared/source-badge';
 import { StatusBadge } from '@/components/shared/status-badge';
 import type { BookingRow } from '@/domain/types';
@@ -59,6 +60,7 @@ export function RecentBookingsTable({ rows }: RecentBookingsTableProps) {
       columns={COLUMNS}
       rowKey={(row) => row.id}
       renderMobileCard={(row) => <RecentBookingMobileCard row={row} />}
+      emptyState={<EmptyState title="No bookings yet" description="Bookings made today will show up here." />}
     />
   );
 }

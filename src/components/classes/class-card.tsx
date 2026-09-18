@@ -10,7 +10,7 @@ import type { CSSProperties } from 'react';
 import { AvatarGroup } from '@/components/shared/avatar-group';
 import { ACCENT_ICON_BG_CLASS, ClassIcon } from '@/components/shared/class-icon';
 import { OccupancyBar } from '@/components/shared/occupancy-bar';
-import type { ClassTypeWithStats, Instructor } from '@/domain/types';
+import type { AccentToken, ClassTypeWithStats, Instructor } from '@/domain/types';
 
 export interface ClassCardProps {
   classType: ClassTypeWithStats;
@@ -18,13 +18,30 @@ export interface ClassCardProps {
   index?: number; // stagger position, capped at 6 (docs/03 12.3.5) - ClassGrid passes index % 6
 }
 
+// Solid accent -> top bar class, so each card reads as its own category rather than an identical
+// white rectangle repeated eight times (docs/03 section 5 "Category tile" is the reference line
+// for this catalog, even though this card keeps the white-surface content docs/06 section 3.7
+// specifies). Duplicated from occupancy-bar.tsx's own accent map rather than imported: that file
+// lives in components/shared/, outside this task's write set.
+const ACCENT_TOP_BAR_CLASS: Record<AccentToken, string> = {
+  purple: 'bg-purple',
+  yellow: 'bg-yellow',
+  green: 'bg-green',
+  pink: 'bg-pink',
+  blue: 'bg-blue',
+};
+
 export function ClassCard({ classType, instructors, index = 0 }: ClassCardProps) {
   return (
     <Link
       href={`/classes/${classType.id}`}
       style={{ '--stagger-index': index } as CSSProperties}
-      className="animate-fade-up flex flex-col gap-4 rounded-card border border-border bg-surface p-6 shadow-card transition-[transform,box-shadow] duration-[var(--duration-fast)] ease-out hover:-translate-y-0.5 hover:shadow-raise active:scale-[0.98] active:duration-[var(--duration-instant)]"
+      className="animate-fade-up group relative flex flex-col gap-4 overflow-hidden rounded-card border border-border bg-surface p-6 pt-5 shadow-card transition-[transform,box-shadow] duration-[var(--duration-fast)] ease-out hover:-translate-y-0.5 hover:shadow-raise active:scale-[0.98] active:duration-[var(--duration-instant)]"
     >
+      <span
+        aria-hidden="true"
+        className={`absolute inset-x-0 top-0 h-1 rounded-t-card ${ACCENT_TOP_BAR_CLASS[classType.accent]}`}
+      />
       <div className="flex items-start justify-between gap-3">
         <span
           aria-hidden="true"
@@ -36,7 +53,9 @@ export function ClassCard({ classType, instructors, index = 0 }: ClassCardProps)
       </div>
 
       <div className="flex flex-col gap-1">
-        <h3 className="text-[17px] font-semibold text-ink">{classType.name}</h3>
+        {/* h2, not h3: the page header's h1 has no intervening h2 before this grid, so h3 here
+            would skip a level (docs/03 section 10 / the polish brief's heading-order rule). */}
+        <h2 className="text-[17px] font-semibold text-ink">{classType.name}</h2>
         <p className="line-clamp-2 text-sm text-text-secondary">{classType.description}</p>
       </div>
 
@@ -45,7 +64,16 @@ export function ClassCard({ classType, instructors, index = 0 }: ClassCardProps)
         <span className="font-medium text-text-secondary">sessions / week</span>
       </div>
 
-      <OccupancyBar rate={classType.averageOccupancy} accent={classType.accent} label="Avg. occupancy" />
+      {/* Stacked label instead of OccupancyBar's own inline `label` prop: that prop reserves a
+          fixed 112px column ahead of the flex-1 track, which a tight 3-column card (lg breakpoint,
+          around 1024px) doesn't have room for alongside the description and instructor row - the
+          non-shrinking label, gaps and percentage outweigh the space left for the track, so it
+          collapses to 0 width and the bar disappears entirely. Stacking the label above leaves the
+          track the full card width at every breakpoint. */}
+      <div className="flex flex-col gap-1.5">
+        <span className="text-sm font-medium text-ink">Avg. occupancy</span>
+        <OccupancyBar rate={classType.averageOccupancy} accent={classType.accent} />
+      </div>
 
       <div className="mt-auto flex items-center justify-between border-t border-border pt-4">
         <span className="text-xs font-semibold text-text-secondary">Instructors</span>
@@ -61,7 +89,7 @@ export function ClassCard({ classType, instructors, index = 0 }: ClassCardProps)
             max={3}
           />
         ) : (
-          <span className="text-xs text-text-tertiary">Unassigned</span>
+          <span className="text-xs text-text-secondary">Unassigned</span>
         )}
       </div>
     </Link>

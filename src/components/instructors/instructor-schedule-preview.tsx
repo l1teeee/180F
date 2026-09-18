@@ -44,7 +44,7 @@ export function InstructorSchedulePreview({ sessions, demoToday }: InstructorSch
               <span className="text-sm font-bold text-ink tabular-nums">{getDayOfMonth(date)}</span>
             </div>
             {daySessions.length === 0 ? (
-              <span className="text-xs text-text-tertiary">No classes</span>
+              <span className="text-xs text-text-secondary">No classes</span>
             ) : (
               <div className="flex flex-col gap-1">
                 {daySessions.map((session) => (

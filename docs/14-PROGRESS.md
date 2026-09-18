@@ -6,45 +6,37 @@ Last updated: 2026-09-17 (Phase 2A accepted)
 
 # Current phase
 
-**Phase 2 complete except 2D.** Foundation committed as checkpoint 6fd3493. Execution switched to an aggressive parallel plan at the client's request: target is about 4 hours of wall clock instead of 11 sequential.
+**Phase 11 - Polish**, three Sonnet agents in parallel on disjoint areas (operational core; catalogue and configuration; public booking plus shell). Last updated 2026-09-18, about 01:40.
 
-## Parallel execution plan
+## Phase status
 
-| Step | Agents | Owns |
+| Phase | State | Commit |
 |---|---|---|
-| running | focus ring fix + motion system | src/app/globals.css, src/app/design-system/** |
-| 1 | shadcn primitives, restyled | components.json, src/components/ui/** |
-| 2 | app shell + shared components, and public booking, in parallel | src/components/{layout,shared}/**, admin routes, login; and src/app/book/**, src/components/booking/** |
-| 3 | six feature agents in parallel | dashboard; calendar+bookings; customers; classes+instructors; memberships+automations; settings+login polish |
-| 4 | three Codex reviews in parallel + Opus integration | read-only |
-| 5 | fix agents in parallel | their own feature paths |
-| 6 | Playwright tests and polish | e2e/**, then cross-cutting polish |
-| 7 | Codex final audit + Opus convergence | read-only |
+| 0 Inspection, 1 Architecture | done | 6fd3493 |
+| 2 Foundation, remediation, design system, motion, overlays, primitives, Playwright harness | done | 6fd3493 .. e753441 |
+| 2D Shell, shared components, public booking | done | c3b422f |
+| Floating frame, blobatar avatars, collapsible rail, rail geometry | done | 27b248f, d46c001 |
+| 3 Dashboard, 4 Calendar and bookings, 5 Customers, 6 Classes and instructors, 7 Memberships and automations, 9 Settings and login | done, built in parallel | 999e42a |
+| Fix round 1 - dialog centring, mobile bottom sheet, shared follow-ups | done | d0da296 |
+| 10 Tests - seven Playwright flows, unit gaps | done | a434d68 |
+| Fix round 2 - persistence across tabs, one definition of today's bookings, calendar hour, public booking hardening | done | f9d35df |
+| 11 Polish | running | |
+| Final review and 12 Convergence | pending | |
 
-Concurrency safety is disjoint path ownership plus a git checkpoint before each fan-out, so a single agent straying can be reverted per path rather than rebuilt. Worktrees were considered and rejected: seven node_modules, seven ports and seven merges cost more than they save at this scale.
+## Latest verification (after fix round 2, run by Opus)
 
-# Completed
+| Gate | Result |
+|---|---|
+| `pnpm typecheck` | clean |
+| `pnpm lint` | zero problems |
+| `pnpm test` | 368 of 368 |
+| `pnpm test:e2e` | 17 passed, 9 skipped by project guard, 0 failed |
 
-- **Phase 0 and 1 (Opus).** 17 documents, 20 ADRs, domain contract, state architecture, design system from the client reference frames, phase plan, ownership map. A cross-document audit produced nine findings, all resolved.
-- **Phase 2A (Sonnet). ACCEPTED.** Next 16.3.5 / React 19.2.8 / TypeScript 5.9.3 / Tailwind 4.3.3, zero peer errors. Tokens in globals.css. /design-system renders the visual language.
-- **Design system overlays (Sonnet). ACCEPTED.** Six overlay patterns - form dialog, destructive confirm, side sheet, bottom sheet, command palette, message preview - each as a static specimen and a live native <dialog>. Verified by driving Chrome: focus order, inert specimens, sheet geometry, Esc and focus return. Two real bugs found and fixed during that verification.
-- **Phase 2B (Sonnet). ACCEPTED.** Types, constants, Zod schemas, the deterministic dataset and the pure selector layer.
-- **Phase 2C (Sonnet). ACCEPTED.** Repositories, ten Zustand stores, the auth strategy, hooks, and the ADR-017 serialized mutation queue.
-- **Phase 2 remediation (Sonnet). ACCEPTED.** All fifteen Codex findings applied. **221 tests green**, up from 90.
+## Next exact action
 
-## Dataset, verified across all seven weekday anchors
-
-| demoToday | sessions | bookings | occupancy | full in next 3 days | almost full | active customers |
-|---|---|---|---|---|---|---|
-| Mon 2026-09-14 | 76 | 1176 | 0.8408 | 4 | 20 | 132 |
-| Tue 2026-09-15 | 76 | 1172 | 0.8406 | 4 | 23 | 132 |
-| Wed 2026-09-16 | 76 | 1177 | 0.8427 | 4 | 22 | 132 |
-| Thu 2026-09-17 | 76 | 1177 | 0.8398 | 4 | 20 | 132 |
-| Fri 2026-09-18 | 76 | 1170 | 0.8414 | 4 | 20 | 132 |
-| Sat 2026-09-19 | 76 | 1170 | 0.8414 | 4 | 21 | 132 |
-| Sun 2026-09-20 | 76 | 1171 | 0.8384 | 4 | 18 | 132 |
-
-Exactly four full sessions on every anchor confirms the deterministic narrative pass is doing the guaranteeing, not the statistical pass getting lucky - which was Codex finding H1.
+1. When polish lands: run the full gate including e2e, commit, push.
+2. Final review. Codex's quota resets at 04:45; if it is not back, run an adversarial review panel of Sonnet agents across correctness, cross-screen consistency, accessibility and demo-readiness.
+3. Apply confirmed findings, then Phase 12: walk master plan section 65's acceptance checklist item by item against the running app.
 
 # Interruption on 2026-09-17, about 22:40
 

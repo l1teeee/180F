@@ -82,11 +82,16 @@ function CustomerMobileCard({ customer, onOpen }: { customer: CustomerWithStats;
         <StatusBadge status={customer.status} />
       </button>
 
+      {/* -mx-1 offsets the added horizontal padding so the label still lines up with the row
+          above it; py-3 (added rather than negative vertical margin, which would eat into the
+          parent's flex `gap-3` and overlap the neighbouring rows) brings this to the 40px minimum
+          tap target docs/03 section 16 requires below md - at 16px of text-only hit area this
+          was well under it. */}
       <button
         type="button"
         onClick={() => setExpanded((value) => !value)}
         aria-expanded={expanded}
-        className="flex items-center gap-1 self-start text-xs font-semibold text-text-tertiary"
+        className="-mx-1 flex items-center gap-1 self-start rounded-field px-1 py-3 text-xs font-semibold text-text-tertiary"
       >
         {expanded ? 'Hide details' : 'Show details'}
         {expanded ? <ChevronUp aria-hidden="true" className="h-3.5 w-3.5" /> : <ChevronDown aria-hidden="true" className="h-3.5 w-3.5" />}

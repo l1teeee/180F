@@ -1,15 +1,15 @@
 "use client"
 
 import type { CSSProperties } from "react"
-import { ChevronLeft } from "lucide-react"
+import { CalendarX2, ChevronLeft } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
+import { EmptyState } from "@/components/shared/empty-state"
 import { cn } from "@/lib/cn"
 import { OCCUPANCY_STATE_STYLE } from "@/domain/constants"
 import type { SessionWithOccupancy } from "@/domain/types"
 import { formatDisplayTime } from "@/lib/dates"
 import { ACCENT_BADGE_VARIANT } from "./accent-styles"
-import { BookingEmptyState } from "./booking-empty-state"
 
 // Master plan section 37's literal pattern: "6:00 AM  12 / 15 spots" / "6:00 PM  FULL". A full
 // slot is disabled and labelled, never removed from the list (§37 "never silently missing").
@@ -43,11 +43,11 @@ export function TimeStep({
         <p className="text-sm text-text-secondary">{dateLabel}</p>
       </div>
       {sessions.length === 0 ? (
-        <BookingEmptyState
-          heading="No sessions available for this day"
+        <EmptyState
+          icon={CalendarX2}
+          title="No sessions available for this day"
           description="Every session on this day has already started, or none has been scheduled yet. Pick another date."
-          actionLabel="Choose another date"
-          onAction={onBack}
+          action={{ label: "Choose another date", onClick: onBack }}
         />
       ) : (
         <div className="flex flex-col gap-2.5">

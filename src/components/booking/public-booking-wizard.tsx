@@ -2,13 +2,14 @@
 
 import { useEffect, useMemo, useRef } from "react"
 
+import { ErrorState } from "@/components/shared/error-state"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useDemoStatus } from "@/hooks/use-demo-status"
 import { usePublicBookingCatalog } from "@/hooks/use-public-booking-catalog"
 import { usePublicBookingSessions } from "@/hooks/use-public-booking-sessions"
 import { usePublicBookingWizard } from "@/hooks/use-public-booking-wizard"
 import { formatDisplayDate } from "@/lib/dates"
-import { BookingErrorState } from "./booking-error-state"
+import { useDemoRuntimeStore } from "@/stores/demo-runtime.store"
 import { BookingSuccess } from "./booking-success"
 import { ClassStep } from "./class-step"
 import { CustomerStep } from "./customer-step"
@@ -21,6 +22,7 @@ import { WizardProgress } from "./wizard-progress"
 // only routes between steps and never computes a count itself.
 export function PublicBookingWizard({ initialClassId }: { initialClassId: string | null }) {
   const status = useDemoStatus()
+  const hydrationError = useDemoRuntimeStore((state) => state.error)
   const wizard = usePublicBookingWizard(initialClassId)
   const classOptions = usePublicBookingCatalog()
   const { dates, sessionsByDate } = usePublicBookingSessions(wizard.selection.classType?.id ?? null)
@@ -52,7 +54,10 @@ export function PublicBookingWizard({ initialClassId }: { initialClassId: string
 
       <div ref={stepRegionRef}>
         {status === "error" ? (
-          <BookingErrorState />
+          <ErrorState
+            description={hydrationError ?? "We couldn't load class availability."}
+            onRetry={() => void useDemoRuntimeStore.getState().retryHydration()}
+          />
         ) : status !== "ready" ? (
           <WizardLoadingSkeleton />
         ) : wizard.step === 2 && wizard.selection.classType ? (

@@ -63,10 +63,25 @@ export function MembershipCard({ plan, memberCount, onEdit, onViewMembers }: Mem
       </p>
 
       <div className="flex items-center gap-2.5 border-t border-border pt-5">
-        <Button type="button" variant="secondary" className="flex-1" onClick={onEdit}>
+        {/* Four cards each carry a same-named "Edit plan" / "View members" pair - aria-label
+            disambiguates for a screen-reader user browsing by role, while the visible label
+            (what sighted users and this task's e2e specs key off) is unchanged. */}
+        <Button
+          type="button"
+          variant="secondary"
+          className="flex-1"
+          aria-label={`Edit ${plan.name} plan`}
+          onClick={onEdit}
+        >
           Edit plan
         </Button>
-        <Button type="button" variant="ghost" className="flex-1" onClick={onViewMembers}>
+        <Button
+          type="button"
+          variant="ghost"
+          className="flex-1"
+          aria-label={`View ${plan.name} members`}
+          onClick={onViewMembers}
+        >
           View members
         </Button>
       </div>

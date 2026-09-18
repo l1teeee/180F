@@ -38,11 +38,15 @@ export function MobileNav({ items, open, onOpenChange }: MobileNavProps) {
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="left" className="flex w-64 flex-col gap-0 p-0 duration-[var(--duration-deliberate)]">
         <SheetHeader className="px-5 pt-5 pr-12 pb-0">
-          <SheetTitle className="flex items-center gap-2.5 text-left">
-            <span aria-hidden="true" className="flex h-8 w-8 items-center justify-center rounded-chip bg-ink text-xs font-bold text-white">
+          {/* min-w-0 + truncate on the name: at w-64 the drawer only has ~150px left of the brand
+              chip and the 40px close button (docs/ui/sheet.tsx, read-only here) for the title, not
+              enough for "180 Fitness Studio" at 20px/650 - wrapping to two lines left the close
+              button's fixed top-right position looking misaligned against the taller header. */}
+          <SheetTitle className="flex min-w-0 items-center gap-2.5 text-left">
+            <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-chip bg-ink text-xs font-bold text-white">
               180
             </span>
-            {studioName}
+            <span className="truncate">{studioName}</span>
           </SheetTitle>
         </SheetHeader>
 
