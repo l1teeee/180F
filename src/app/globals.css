@@ -502,6 +502,52 @@
 }
 
 /*
+ * Radix overlays (docs/03 section 11.5): Dialog, Sheet, Popover, DropdownMenu, Select, Tooltip.
+ * Radix mounts these already in data-state="open", so a CSS transition has no "from" style to
+ * run from and the overlay used to show up at full opacity in a single frame. Its Presence also
+ * only waits for CSS animations (animationend) before unmounting, never for transitions, so
+ * every close was instant too. Keyframe animations fix both: they play on mount, and Presence
+ * keeps the node mounted until the exit animation ends.
+ *
+ * One enter and one exit keyframe cover every pattern. A component says where it starts from
+ * through --overlay-from-opacity / -x / -y / -scale (defaults: an opacity-only fade) and how
+ * long the enter takes through --overlay-duration; the exit is always --duration-fast. Custom
+ * properties inherit, so set them only on the animated overlay element itself.
+ */
+@keyframes overlay-enter {
+  from {
+    opacity: var(--overlay-from-opacity, 0);
+    translate: var(--overlay-from-x, 0) var(--overlay-from-y, 0);
+    scale: var(--overlay-from-scale, 1);
+  }
+}
+@keyframes overlay-exit {
+  to {
+    opacity: var(--overlay-from-opacity, 0);
+    translate: var(--overlay-from-x, 0) var(--overlay-from-y, 0);
+    scale: var(--overlay-from-scale, 1);
+  }
+}
+/* Changes nothing visible: keeps a wrapper mounted while its animating child plays its exit. */
+@keyframes overlay-hold {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@utility animate-overlay-enter {
+  animation: overlay-enter var(--overlay-duration, var(--duration-base)) var(--ease-out) both;
+}
+@utility animate-overlay-exit {
+  animation: overlay-exit var(--duration-fast) var(--ease-in) both;
+}
+@utility animate-overlay-hold {
+  animation: overlay-hold var(--duration-fast) linear both;
+}
+
+/*
  * Reduced motion (docs/03 section 12.4) - implemented once, globally, not per component. Every
  * transform-based entrance pattern above collapses to opacity alone capped at --duration-fast,
  * and the shimmer sweep stops moving (a static muted fill). Re-declaring a @keyframes with the
@@ -555,5 +601,17 @@
     animation: none;
     opacity: 1;
     transform: none;
+  }
+
+  /* Radix overlays: every pattern (slide, scale, lift) drops to the opacity fade alone. */
+  @keyframes overlay-enter {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes overlay-exit {
+    to {
+      opacity: 0;
+    }
   }
 }

@@ -7,10 +7,11 @@ import { X } from "lucide-react"
 import { cn } from "@/lib/cn"
 import { useMessages } from "@/hooks/use-messages"
 
-// docs/03 section 11 "Overlays". Motion here is plain transition + data-state, not a keyframe
-// "animate-in" library: Radix's Presence already waits for a running CSS transition to finish
-// before it unmounts the content, so a transition tied to data-[state=open|closed] is enough -
-// no extra CSS file and no touch to the read-only globals.css token/keyframe source of truth.
+// docs/03 section 11 "Overlays". Motion is the animate-overlay-enter / animate-overlay-exit pair
+// from globals.css, keyed to Radix's data-state. It has to be a keyframe animation, not a CSS
+// transition: Radix mounts the content already in data-state="open" (a transition has no "from"
+// style to run from), and its Presence only waits for animationend before unmounting, never for
+// a transition - so a transition-based enter and exit both used to happen in a single frame.
 
 function Dialog({ ...props }: React.ComponentProps<typeof DialogPrimitive.Root>) {
   return <DialogPrimitive.Root data-slot="dialog" {...props} />
@@ -37,7 +38,7 @@ function DialogOverlay({
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
       className={cn(
-        "fixed inset-0 z-50 bg-scrim opacity-0 backdrop-blur-[2px] transition-opacity duration-[var(--duration-fast)] ease-out data-[state=open]:opacity-100",
+        "fixed inset-0 z-50 bg-scrim backdrop-blur-[2px] [--overlay-duration:var(--duration-fast)] data-[state=open]:animate-overlay-enter data-[state=closed]:animate-overlay-exit",
         className
       )}
       {...props}
@@ -66,8 +67,8 @@ const DIALOG_SIZE_WIDTH: Record<"sm" | "md" | "lg" | "palette", string> = {
 // the dialog rendered from the viewport's vertical midpoint down, trapping a tall form's footer
 // off-screen with background scroll locked. Centring now happens one level up, on a plain flex
 // layer that writes no transform at all, so the two offsets never compete; this element only ever
-// carries the entrance transform, `motion-safe:`-gated so `prefers-reduced-motion: reduce`
-// collapses it to the opacity fade alone (section 12.4) instead of a translate.
+// carries the entrance offset (--overlay-from-y, read by the keyframes in globals.css, which
+// also collapse it to the opacity fade alone under prefers-reduced-motion, section 12.4).
 function DialogContent({
   className,
   children,
@@ -84,9 +85,12 @@ function DialogContent({
   return (
     <DialogPortal>
       <DialogOverlay />
+      {/* Radix treats this wrapper as the portal's own child and unmounts it the instant `open`
+          turns false unless it is animating, which would cut the content's exit short. The
+          no-op hold animation keeps it mounted exactly as long as the content's exit runs. */}
       <div
         className={cn(
-          "fixed inset-0 z-50 flex justify-center overflow-y-auto",
+          "fixed inset-0 z-50 flex justify-center overflow-y-auto has-[[data-slot=dialog-content][data-state=closed]]:animate-overlay-hold",
           position === "center" && "items-end sm:items-center sm:p-4",
           position === "top" && "items-start px-4 pt-[12vh] pb-4"
         )}
@@ -95,11 +99,10 @@ function DialogContent({
           data-slot="dialog-content"
           style={{ "--dialog-w": `min(${DIALOG_SIZE_WIDTH[size]}, calc(100vw - 2rem))` } as React.CSSProperties}
           className={cn(
-            "relative z-50 flex max-h-[85vh] flex-col gap-5 overflow-hidden border border-border bg-surface p-6 text-sm text-ink shadow-modal opacity-0 outline-none transition-[opacity,transform] duration-[var(--duration-base)] ease-out data-[state=closed]:duration-[var(--duration-fast)] data-[state=closed]:ease-in data-[state=open]:opacity-100",
+            "relative z-50 flex max-h-[85vh] flex-col gap-5 overflow-hidden border border-border bg-surface p-6 text-sm text-ink shadow-modal outline-none data-[state=open]:animate-overlay-enter data-[state=closed]:animate-overlay-exit",
             position === "center" &&
-              "w-full rounded-t-[var(--radius-card)] rounded-b-none duration-[220ms] motion-safe:data-[state=closed]:translate-y-full motion-safe:data-[state=open]:translate-y-0 sm:w-[var(--dialog-w)] sm:rounded-card sm:duration-[var(--duration-base)] sm:motion-safe:data-[state=closed]:translate-y-2",
-            position === "top" &&
-              "w-[var(--dialog-w)] rounded-card motion-safe:data-[state=closed]:translate-y-2 motion-safe:data-[state=open]:translate-y-0",
+              "w-full rounded-t-[var(--radius-card)] rounded-b-none [--overlay-duration:220ms] [--overlay-from-opacity:1] [--overlay-from-y:100%] sm:w-[var(--dialog-w)] sm:rounded-card sm:[--overlay-duration:var(--duration-base)] sm:[--overlay-from-opacity:0] sm:[--overlay-from-y:8px]",
+            position === "top" && "w-[var(--dialog-w)] rounded-card [--overlay-from-y:8px]",
             className
           )}
           {...props}

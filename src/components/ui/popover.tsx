@@ -26,7 +26,7 @@ function PopoverContent({
         align={align}
         sideOffset={sideOffset}
         className={cn(
-          "z-50 w-72 origin-(--radix-popover-content-transform-origin) rounded-card-sm border border-border bg-surface p-4 text-sm text-ink shadow-card opacity-0 outline-none transition-[opacity,transform] duration-[var(--duration-base)] ease-out data-[state=closed]:scale-95 data-[state=closed]:duration-[var(--duration-fast)] data-[state=closed]:ease-in data-[state=open]:scale-100 data-[state=open]:opacity-100",
+          "z-50 w-72 origin-(--radix-popover-content-transform-origin) rounded-card-sm border border-border bg-surface p-4 text-sm text-ink shadow-card outline-none [--overlay-from-scale:0.95] data-[state=open]:animate-overlay-enter data-[state=closed]:animate-overlay-exit",
           className
         )}
         {...props}

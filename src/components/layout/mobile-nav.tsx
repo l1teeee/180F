@@ -39,7 +39,7 @@ export function MobileNav({ items, open, onOpenChange }: MobileNavProps) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="left" className="flex w-64 flex-col gap-0 p-0 duration-[var(--duration-deliberate)]">
+      <SheetContent side="left" className="flex w-64 flex-col gap-0 p-0 [--overlay-duration:var(--duration-deliberate)]">
         <SheetHeader className="px-5 pt-5 pr-12 pb-0">
           {/* min-w-0 + truncate on the name: at w-64 the drawer only has ~150px left of the brand
               chip and the 40px close button (docs/ui/sheet.tsx, read-only here) for the title, not

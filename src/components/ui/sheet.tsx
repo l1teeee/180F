@@ -31,7 +31,7 @@ function SheetOverlay({
     <SheetPrimitive.Overlay
       data-slot="sheet-overlay"
       className={cn(
-        "fixed inset-0 z-50 bg-scrim opacity-0 backdrop-blur-[2px] transition-opacity duration-[var(--duration-fast)] ease-out data-[state=open]:opacity-100",
+        "fixed inset-0 z-50 bg-scrim backdrop-blur-[2px] [--overlay-duration:var(--duration-fast)] data-[state=open]:animate-overlay-enter data-[state=closed]:animate-overlay-exit",
         className
       )}
       {...props}
@@ -42,13 +42,14 @@ function SheetOverlay({
 // docs/03 section 11.4-C "Side sheet": inset 12px from the viewport edges so it floats like every
 // other card, all four corners at 24px. Enters with a 220ms translateX(100%)->0 (section 11.5);
 // 220ms has no matching --duration-* token, it is the doc's own literal value for this pattern.
+// The slide is the --overlay-from-x/-y offset the keyframes in globals.css start from, and the
+// exit slides back out to it.
 const SHEET_SIDE_CLASSNAME: Record<"top" | "right" | "bottom" | "left", string> = {
   right:
-    "inset-y-3 right-3 h-[calc(100%-24px)] w-[420px] max-w-[calc(100vw-24px)] data-[state=closed]:translate-x-full data-[state=open]:translate-x-0",
-  left: "inset-y-3 left-3 h-[calc(100%-24px)] w-[420px] max-w-[calc(100vw-24px)] data-[state=closed]:-translate-x-full data-[state=open]:translate-x-0",
-  top: "inset-x-3 top-3 h-auto max-h-[85vh] data-[state=closed]:-translate-y-full data-[state=open]:translate-y-0",
-  bottom:
-    "inset-x-3 bottom-3 h-auto max-h-[85vh] data-[state=closed]:translate-y-full data-[state=open]:translate-y-0",
+    "inset-y-3 right-3 h-[calc(100%-24px)] w-[420px] max-w-[calc(100vw-24px)] [--overlay-from-x:100%]",
+  left: "inset-y-3 left-3 h-[calc(100%-24px)] w-[420px] max-w-[calc(100vw-24px)] [--overlay-from-x:-100%]",
+  top: "inset-x-3 top-3 h-auto max-h-[85vh] [--overlay-from-y:-100%]",
+  bottom: "inset-x-3 bottom-3 h-auto max-h-[85vh] [--overlay-from-y:100%]",
 }
 
 function SheetContent({
@@ -69,7 +70,7 @@ function SheetContent({
         data-slot="sheet-content"
         data-side={side}
         className={cn(
-          "fixed z-50 flex flex-col gap-4 rounded-card border border-border bg-surface p-6 text-sm text-ink shadow-modal outline-none transition-transform duration-[220ms] ease-out data-[state=closed]:duration-[var(--duration-fast)] data-[state=closed]:ease-in",
+          "fixed z-50 flex flex-col gap-4 rounded-card border border-border bg-surface p-6 text-sm text-ink shadow-modal outline-none [--overlay-duration:220ms] [--overlay-from-opacity:1] data-[state=open]:animate-overlay-enter data-[state=closed]:animate-overlay-exit",
           SHEET_SIDE_CLASSNAME[side],
           className
         )}
