@@ -19,6 +19,10 @@ export const auth = {
   forgotPassword: '¿Olvidaste tu contraseña?',
   forgotPasswordToast: 'El restablecimiento de contraseña no está disponible en esta demo.',
   signIn: 'Iniciar sesión',
+  signingIn: 'Iniciando sesión',
+  signingInHint: 'Preparando tu estudio',
+  showPassword: 'Mostrar contraseña',
+  hidePassword: 'Ocultar contraseña',
   genericError: 'Algo salió mal. Inténtalo de nuevo.',
   demoCredentialsLabel: 'Credenciales de la demo:',
   errors: {

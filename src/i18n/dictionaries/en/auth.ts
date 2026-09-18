@@ -12,6 +12,10 @@ export const auth = {
   forgotPassword: 'Forgot password',
   forgotPasswordToast: "Password reset isn't available in this demo.",
   signIn: 'Sign in',
+  signingIn: 'Signing you in',
+  signingInHint: 'Getting your studio ready',
+  showPassword: 'Show password',
+  hidePassword: 'Hide password',
   genericError: 'Something went wrong. Try again.',
   demoCredentialsLabel: 'Demo credentials:',
   errors: {
