@@ -1,21 +1,28 @@
-// Route skeleton only - Phase 6 replaces this with InstructorGrid, 6 InstructorCards
-// (docs/06 section 3.9).
-import { GraduationCap } from 'lucide-react';
+'use client';
+
+// docs/06-ROUTES-AND-SCREENS.md section 3.9 / master plan section 29.
+import { InstructorGrid } from '@/components/instructors/instructor-grid';
 import { PageHeader } from '@/components/layout/page-header';
-import { EmptyState } from '@/components/shared/empty-state';
-import { SectionCard } from '@/components/shared/section-card';
+import { ErrorState } from '@/components/shared/error-state';
+import { LoadingSkeleton } from '@/components/shared/loading-skeleton';
+import { useInstructorsRoster } from '@/hooks/use-instructors-roster';
+import { useDemoRuntimeStore } from '@/stores/demo-runtime.store';
 
 export default function InstructorsPage() {
+  const status = useDemoRuntimeStore((state) => state.status);
+  const retryHydration = useDemoRuntimeStore((state) => state.retryHydration);
+  const roster = useInstructorsRoster();
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Instructors" subtitle="Studio team, specialties and schedules." />
-      <SectionCard title="Studio team">
-        <EmptyState
-          icon={GraduationCap}
-          title="This screen isn't built yet"
-          description="Phase 6 adds the 6 instructor cards with specialty, weekly sessions, rating and status."
-        />
-      </SectionCard>
+      {status === 'error' ? (
+        <ErrorState onRetry={retryHydration} />
+      ) : status !== 'ready' || !roster ? (
+        <LoadingSkeleton variant="card" count={6} className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3" />
+      ) : (
+        <InstructorGrid instructors={roster} />
+      )}
     </div>
   );
 }

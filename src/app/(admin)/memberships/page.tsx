@@ -1,21 +1,69 @@
-// Route skeleton only - Phase 7 replaces this with 4 MembershipCards and PlanEditDialog
-// (docs/06 section 3.11).
-import { CreditCard } from 'lucide-react';
+'use client';
+
+// docs/06-ROUTES-AND-SCREENS.md section 3.11. Phase 7 write set (docs/12-AGENT-OWNERSHIP.md).
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/layout/page-header';
-import { EmptyState } from '@/components/shared/empty-state';
-import { SectionCard } from '@/components/shared/section-card';
+import { MembershipCard } from '@/components/memberships/membership-card';
+import { PlanEditDialog } from '@/components/memberships/plan-edit-dialog';
+import { ErrorState } from '@/components/shared/error-state';
+import { LoadingSkeleton } from '@/components/shared/loading-skeleton';
+import { useDemoStatus } from '@/hooks/use-demo-status';
+import { useMembershipPlanRows } from '@/hooks/use-memberships-plans';
+import { useDemoRuntimeStore } from '@/stores/demo-runtime.store';
 
 export default function MembershipsPage() {
+  const status = useDemoStatus();
+  const error = useDemoRuntimeStore((state) => state.error);
+  const retryHydration = useDemoRuntimeStore((state) => state.retryHydration);
+  const rows = useMembershipPlanRows();
+  const router = useRouter();
+
+  // The dialog is shared across all four cards - editingPlanId points at whichever plan was
+  // last opened and is left as-is on close (only editOpen flips) so PlanEditDialog still has a
+  // real plan to render while its 150ms close transition (docs/03 section 11.5) plays out.
+  const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const editingPlan = rows?.find((row) => row.plan.id === editingPlanId)?.plan ?? null;
+
+  if (status === 'error') {
+    return (
+      <div className="flex flex-col gap-6">
+        <PageHeader title="Memberships" subtitle="Plans, pricing and member counts." />
+        <ErrorState description={error ?? "We couldn't load your membership plans."} onRetry={retryHydration} />
+      </div>
+    );
+  }
+
+  if (status !== 'ready' || !rows) {
+    return (
+      <div className="flex flex-col gap-6">
+        <PageHeader title="Memberships" subtitle="Plans, pricing and member counts." />
+        <LoadingSkeleton variant="card" count={4} />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Memberships" subtitle="Plans, pricing and member counts." />
-      <SectionCard title="Plans">
-        <EmptyState
-          icon={CreditCard}
-          title="This screen isn't built yet"
-          description="Phase 7 adds the 4 membership plan cards with edit-plan and view-members actions."
-        />
-      </SectionCard>
+
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+        {rows.map(({ plan, memberCount }) => (
+          <MembershipCard
+            key={plan.id}
+            plan={plan}
+            memberCount={memberCount}
+            onEdit={() => {
+              setEditingPlanId(plan.id);
+              setEditOpen(true);
+            }}
+            onViewMembers={() => router.push(`/customers?membershipId=${plan.id}`)}
+          />
+        ))}
+      </div>
+
+      <PlanEditDialog plan={editingPlan} open={editOpen} onOpenChange={setEditOpen} />
     </div>
   );
 }

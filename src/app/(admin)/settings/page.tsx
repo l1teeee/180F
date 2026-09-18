@@ -1,21 +1,56 @@
-// Route skeleton only - Phase 9 replaces this with the General/Booking/Notifications/Branding
-// SectionCards (docs/06 section 3.13).
-import { Settings } from 'lucide-react';
+'use client';
+
+// docs/06-ROUTES-AND-SCREENS.md section 3.13 + master plan section 40. Four independent
+// SectionCard forms, each writing its own slice through useSettingsStore.updateSection
+// (docs/08 section 8.7, ADR-019) - saving one section never touches another's unsaved edits.
 import { PageHeader } from '@/components/layout/page-header';
-import { EmptyState } from '@/components/shared/empty-state';
-import { SectionCard } from '@/components/shared/section-card';
+import { ErrorState } from '@/components/shared/error-state';
+import { LoadingSkeleton } from '@/components/shared/loading-skeleton';
+import { BookingSection } from '@/components/settings/booking-section';
+import { BrandingSection } from '@/components/settings/branding-section';
+import { GeneralSection } from '@/components/settings/general-section';
+import { NotificationsSection } from '@/components/settings/notifications-section';
+import { useDemoStatus } from '@/hooks/use-demo-status';
+import { useSettingsForm } from '@/hooks/use-settings-form';
+import { useDemoRuntimeStore } from '@/stores/demo-runtime.store';
 
 export default function SettingsPage() {
+  const status = useDemoStatus();
+  const retryHydration = useDemoRuntimeStore((state) => state.retryHydration);
+  const { settings, updateSection } = useSettingsForm();
+
+  if (status === 'error') {
+    return (
+      <div className="flex flex-col gap-6">
+        <PageHeader title="Settings" subtitle="Studio profile, booking policy and branding." />
+        <ErrorState description="We couldn't load your studio settings." onRetry={retryHydration} />
+      </div>
+    );
+  }
+
+  if (status !== 'ready' || !settings) {
+    return (
+      <div className="flex flex-col gap-6">
+        <PageHeader title="Settings" subtitle="Studio profile, booking policy and branding." />
+        {/* LoadingSkeleton has no 'form-section' variant - docs/06 section 4.5 names one, but the
+           shared component (read-only to this task) only ships card/table-row/chart/kpi/text.
+           'card' is the closest existing shape; reported for hoisting rather than editing the
+           shared file (docs/12-AGENT-OWNERSHIP.md). */}
+        <LoadingSkeleton variant="card" count={4} />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Settings" subtitle="Studio profile, booking policy and branding." />
-      <SectionCard title="Studio settings">
-        <EmptyState
-          icon={Settings}
-          title="This screen isn't built yet"
-          description="Phase 9 adds the general, booking, notifications and branding sections."
-        />
-      </SectionCard>
+      <GeneralSection general={settings.general} onSave={(changes) => updateSection('general', changes)} />
+      <BookingSection booking={settings.booking} onSave={(changes) => updateSection('booking', changes)} />
+      <NotificationsSection
+        notifications={settings.notifications}
+        onSave={(changes) => updateSection('notifications', changes)}
+      />
+      <BrandingSection branding={settings.branding} onSave={(changes) => updateSection('branding', changes)} />
     </div>
   );
 }

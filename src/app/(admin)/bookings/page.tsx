@@ -1,21 +1,123 @@
-// Route skeleton only - Phase 4 replaces this with StatusTabs, BookingFilters, BookingsTable
-// (DataTable) and BookingDialog (docs/06 section 3.4). Subtitle copy is the master-plan literal.
-import { ClipboardList } from 'lucide-react';
+'use client';
+
+// docs/06-ROUTES-AND-SCREENS.md section 3.4. PageHeader's CTA and the empty state's action both
+// open the same BookingDialog; cancelling reuses the shared destructive ConfirmDialog
+// (docs/03-DESIGN-SYSTEM.md section 11.4-B) with override: true (docs/08-STATE-MANAGEMENT.md
+// section 8.3: "Admin actions may pass an explicit override: true").
+import { useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import { PageHeader } from '@/components/layout/page-header';
-import { EmptyState } from '@/components/shared/empty-state';
 import { SectionCard } from '@/components/shared/section-card';
+import { ConfirmDialog } from '@/components/shared/confirm-dialog';
+import { ErrorState } from '@/components/shared/error-state';
+import { LoadingSkeleton } from '@/components/shared/loading-skeleton';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { BookingDialog } from '@/components/bookings/booking-dialog';
+import { BookingFiltersBar } from '@/components/bookings/booking-filters';
+import { BookingsTable } from '@/components/bookings/bookings-table';
+import { StatusTabs } from '@/components/bookings/status-tabs';
+import type { BookingFilters, BookingRow } from '@/domain/types';
+import { useBookingRows } from '@/hooks/use-booking-rows';
+import { useBookingsTabCounts, type BookingsTabKey } from '@/hooks/use-bookings-tab-counts';
+import { useDemoStatus } from '@/hooks/use-demo-status';
+import { formatDisplayDateShort } from '@/lib/dates';
+import { useBookingStore } from '@/stores/booking.store';
+import { useDemoRuntimeStore } from '@/stores/demo-runtime.store';
+
+const EMPTY_FILTERS: BookingFilters = { query: '', status: 'all', source: 'all', date: null };
 
 export default function BookingsPage() {
+  const status = useDemoStatus();
+  const [filters, setFilters] = useState<BookingFilters>(EMPTY_FILTERS);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [cancelTarget, setCancelTarget] = useState<BookingRow | null>(null);
+
+  // Tab counts intentionally ignore the status filter itself (docs/08 section 6 point 5: this
+  // object is passed down from a render body, so it is memoised here rather than inside the hook).
+  const tabFilters = useMemo(
+    () => ({ query: filters.query, source: filters.source, date: filters.date }),
+    [filters.query, filters.source, filters.date],
+  );
+  const tabCounts = useBookingsTabCounts(tabFilters);
+  const rows = useBookingRows(filters);
+
+  function handleTabChange(tab: BookingsTabKey) {
+    setFilters((prev) => ({ ...prev, status: tab }));
+  }
+
+  async function handleConfirmCancel() {
+    if (!cancelTarget) return;
+    const result = await useBookingStore.getState().cancelBooking(cancelTarget.id, { override: true });
+    if (!result.ok) {
+      toast.error(result.message);
+      // ConfirmDialog's contract (src/components/shared/confirm-dialog.tsx): a thrown onConfirm
+      // keeps the dialog open instead of closing on a rejection it never explains itself.
+      throw new Error(result.reason);
+    }
+    toast.success('Booking cancelled');
+  }
+
+  if (status === 'error') {
+    return (
+      <div className="flex flex-col gap-6">
+        <PageHeader title="Bookings" subtitle="Manage all class reservations." />
+        <SectionCard title="All bookings">
+          <ErrorState onRetry={() => void useDemoRuntimeStore.getState().retryHydration()} />
+        </SectionCard>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Bookings" subtitle="Manage all class reservations." />
+      <PageHeader
+        title="Bookings"
+        subtitle="Manage all class reservations."
+        actions={
+          <Button type="button" variant="ink" onClick={() => setDialogOpen(true)}>
+            New booking
+          </Button>
+        }
+      />
+
       <SectionCard title="All bookings">
-        <EmptyState
-          icon={ClipboardList}
-          title="This screen isn't built yet"
-          description="Phase 4 adds the status tabs, filters, the bookings table and the new-booking dialog."
-        />
+        {status !== 'ready' ? (
+          <div className="flex flex-col gap-5">
+            <div className="flex flex-wrap gap-3">
+              <Skeleton className="h-10 w-64" />
+              <Skeleton className="h-10 w-40" />
+              <Skeleton className="h-10 w-40" />
+            </div>
+            <Skeleton className="h-10 w-80" />
+            <LoadingSkeleton variant="table-row" count={6} />
+          </div>
+        ) : (
+          <div className="flex flex-col gap-5">
+            <BookingFiltersBar filters={filters} onFiltersChange={setFilters} onReset={() => setFilters(EMPTY_FILTERS)} />
+            <StatusTabs value={filters.status} onValueChange={handleTabChange} counts={tabCounts} />
+            <BookingsTable rows={rows} onCancelRequest={setCancelTarget} onCreateBooking={() => setDialogOpen(true)} />
+          </div>
+        )}
       </SectionCard>
+
+      <BookingDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+
+      <ConfirmDialog
+        open={cancelTarget != null}
+        onOpenChange={(open) => {
+          if (!open) setCancelTarget(null);
+        }}
+        title="Cancel this booking?"
+        description={
+          cancelTarget
+            ? `This cancels ${cancelTarget.customer.name}'s booking for ${cancelTarget.classType.name} on ${formatDisplayDateShort(cancelTarget.session.date)} and cannot be undone.`
+            : undefined
+        }
+        confirmLabel="Cancel booking"
+        destructive
+        onConfirm={handleConfirmCancel}
+      />
     </div>
   );
 }
