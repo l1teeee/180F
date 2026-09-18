@@ -6,8 +6,9 @@
 // instead of nesting a separate <Button> as an asChild ref target (button.tsx is a plain
 // function component, not wrapped in forwardRef).
 import { useRouter } from 'next/navigation';
-import { HelpCircle, LogOut, Menu, User as UserIcon } from 'lucide-react';
+import { HelpCircle, LogOut, Menu } from 'lucide-react';
 import { buttonVariants } from '@/components/ui/button';
+import { AvatarBlobatar } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +21,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { SearchInput } from '@/components/shared/search-input';
 import { useAuth } from '@/services/auth/auth-context';
 import { cn } from '@/lib/cn';
+import { ADMIN_ACCENT, ADMIN_SEED, paletteForAccent } from '@/lib/avatar';
 import { useUiStore } from '@/stores/ui.store';
 import { DemoBadge } from './demo-badge';
 import { NotificationsMenu } from './notifications-menu';
@@ -86,12 +88,24 @@ export function TopBar({ user }: TopBarProps) {
 
         <DropdownMenu>
           <DropdownMenuTrigger
-            className="flex items-center gap-2.5 rounded-pill border border-border bg-surface py-1 pr-3 pl-1 text-sm font-semibold text-ink transition-colors duration-[var(--duration-fast)] ease-out hover:bg-surface-muted"
+            className="flex h-10 items-center gap-2.5 rounded-pill border border-border bg-surface pr-3 pl-1 text-sm font-semibold text-ink transition-colors duration-[var(--duration-fast)] ease-out hover:bg-surface-muted"
             aria-label="Account menu"
           >
-            <span aria-hidden="true" className="flex h-8 w-8 items-center justify-center rounded-pill bg-purple-xsoft text-purple-deep">
-              <UserIcon className="h-4 w-4" />
-            </span>
+            {/*
+             * docs/03 section 13 "Avatars" / ADR-021: the signed-in administrator's blobatar,
+             * replacing the generic person icon - 40px, docs/03 section 13's own size for "the
+             * top bar and cards". animate="hover" is one of the two permitted spots (docs/03
+             * section 13 "Motion") - exactly one instance renders here.
+             */}
+            <AvatarBlobatar
+              seed={ADMIN_SEED}
+              palette={paletteForAccent(ADMIN_ACCENT)}
+              size={40}
+              alt=""
+              animate="hover"
+              fallbackInitials="A"
+              fallbackClassName="bg-purple-xsoft"
+            />
             <span className="hidden sm:inline">{user.name}</span>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-52">

@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card"
 import { cn } from "@/lib/cn"
 import type { Booking, ClassType, SessionWithOccupancy } from "@/domain/types"
 import { formatDisplayDate, formatDisplayTime } from "@/lib/dates"
+import { escapeIcsText, foldIcsLine } from "@/lib/ics"
 import { useSettingsStore } from "@/stores/settings.store"
 
 // Minimal floating-time .ics (no VTIMEZONE block) - a calendar app imports and shows it at the
@@ -30,11 +31,13 @@ function buildCalendarFileUrl(
     `UID:${booking.id}@180fitness.demo`,
     `DTSTART:${start}`,
     `DTEND:${end}`,
-    `SUMMARY:${classType.name} at 180 Fitness Studio`,
-    address ? `LOCATION:${address}` : null,
+    `SUMMARY:${escapeIcsText(`${classType.name} at 180 Fitness Studio`)}`,
+    address ? `LOCATION:${escapeIcsText(address)}` : null,
     "END:VEVENT",
     "END:VCALENDAR",
-  ].filter((line): line is string => line != null)
+  ]
+    .filter((line): line is string => line != null)
+    .map(foldIcsLine)
   return URL.createObjectURL(new Blob([lines.join("\r\n")], { type: "text/calendar" }))
 }
 

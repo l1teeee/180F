@@ -10,10 +10,21 @@ import { useDemoRuntimeStore } from '@/stores/demo-runtime.store';
 
 export function DemoDataProvider({ children }: { children: ReactNode }) {
   const hydrateDemo = useDemoRuntimeStore((state) => state.hydrateDemo);
+  const status = useDemoRuntimeStore((state) => state.status);
 
   useEffect(() => {
     void hydrateDemo();
   }, [hydrateDemo]);
+
+  // The Playwright harness waits on body[data-demo-status="ready"] (e2e/fixtures/hydration.ts).
+  // Written in a client effect only, never during render, so server-rendered markup never carries
+  // a status attribute (ADR-005) - this runs after mount and re-runs on every status transition.
+  useEffect(() => {
+    document.body.dataset.demoStatus = status;
+    return () => {
+      delete document.body.dataset.demoStatus;
+    };
+  }, [status]);
 
   return <>{children}</>;
 }

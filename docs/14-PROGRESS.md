@@ -46,6 +46,18 @@ Concurrency safety is disjoint path ownership plus a git checkpoint before each 
 
 Exactly four full sessions on every anchor confirms the deterministic narrative pass is doing the guaranteeing, not the statistical pass getting lucky - which was Codex finding H1.
 
+# Interruption on 2026-09-17, about 22:40
+
+The Claude session hit its usage limit while eight agents were running. All of them failed at once. Nothing was lost that mattered: the six feature agents had written nothing yet, and the avatar and collapsible-sidebar work had already been committed in `c3b422f` because that agent was still writing when the milestone was taken. Only the floating-frame work was left half-done in the working tree.
+
+Recovery at 23:03, after the limit reset: dev server restarted, eight agents relaunched - the six feature screens, a finisher for the frame and four shell follow-ups, and the iCalendar escaping fix below.
+
+## Security review finding: iCalendar property injection
+
+`src/components/booking/booking-success.tsx` concatenated the studio address and the class name straight into `.ics` property lines. Both are editable in the app, so CR or LF characters in them would splice arbitrary properties into the calendar file.
+
+Graded honestly: exploitability is low, because settings are local unpersisted state and the only person able to inject is the administrator in their own browser. But it is also a real correctness bug with our own seeded data - the seeded address contains a comma, which RFC 5545 requires to be escaped in TEXT values, so the file generated until now was technically invalid. Fixed with a dedicated escaping helper and tests.
+
 # Codex architecture verification (gpt-6-astra, read-only, before the state layer was built)
 
 Codex reproduced the specified PRNG, compiled the stylesheet in memory and measured contrast ratios rather than reading only. Zero critical, five high, nine medium, one low. All fifteen accepted and folded into the contracts on 2026-09-17:

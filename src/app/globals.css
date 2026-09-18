@@ -74,6 +74,17 @@
 
   /* Manrope is loaded in src/app/layout.tsx; this wires it into Tailwind's default sans stack. */
   --font-sans: var(--font-manrope), Inter, ui-sans-serif, system-ui, sans-serif;
+
+  /*
+   * docs/03 section 15.1 "Frame colour - deliberately not black". The application frame the
+   * content panel floats on. Black was rejected: it reads as a second, unrelated design stapled
+   * onto a pastel-lavender product. This is a deep aubergine instead, low chroma, carrying the
+   * same purple family as the brand so it recedes behind the content rather than competing with
+   * it - white on it measures about 13:1, far above the AA floor.
+   */
+  --color-shell: #2B2542; /* the frame */
+  --color-shell-soft: #3A3358; /* rail hover */
+  --color-shell-line: #453D66; /* rail separators */
 }
 
 /*

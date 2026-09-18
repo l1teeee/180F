@@ -75,4 +75,4 @@ pnpm check        # typecheck + lint + test
 - Structural change (route, contract, store, token, technology) made by an implementer without Opus approval.
 
 ## Known issues
-See `/docs/14-PROGRESS.md`. No git commits have been made; commits and pushes require explicit user authorisation each time.
+See `/docs/14-PROGRESS.md`. The repository is pushed to `github.com/l1teeee/180F`; the user has authorised Opus to commit and push milestones. Implementers never run a git write command - git belongs to Opus alone.

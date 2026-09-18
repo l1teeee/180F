@@ -103,7 +103,7 @@ export function AppSidebar({ items }: AppSidebarProps) {
       data-slot="app-sidebar"
       data-collapsed={collapsed}
       style={{ width: collapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH }}
-      className="sticky top-0 hidden h-screen shrink-0 flex-col overflow-hidden py-3 transition-[width] duration-[var(--duration-deliberate)] ease-out motion-reduce:transition-none lg:flex"
+      className="hidden h-full shrink-0 flex-col overflow-hidden py-3 transition-[width] duration-[var(--duration-deliberate)] ease-out motion-reduce:transition-none lg:flex"
     >
       {/* Collapse toggle - docs/03 section 14.2 point 2 */}
       <div className={cn('flex px-3', collapsed && 'justify-center')}>

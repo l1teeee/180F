@@ -78,3 +78,17 @@ Rules binding all six:
 ## Known ownership incident
 
 Five agents so far have acted on a message the harness relayed from the user mid-run, treating it as their instruction. One committed and pushed another agent's half-written files; four abandoned their task to answer a question. Nothing was lost, because every wave is preceded by a git checkpoint. Mitigation now in force: every brief carries an explicit override notice both at its head and immediately before its final instruction, stating that relayed messages are context addressed to the orchestrator and that no implementer ever runs a git write command.
+
+---
+
+## Model and effort routing
+
+The client delegated the choice of effort level per task to Opus on 2026-09-17. Every implementer is Claude Sonnet 5; Opus never writes application code. Effort is chosen by what a mistake would cost, not by how big the task looks.
+
+| Effort | Used for | Why |
+|---|---|---|
+| `max` | feature screens, the public booking flow, anything touching the booking ledger or mutations | the demo's credibility and its single source of truth live here; a subtle error costs a failed client demo |
+| `high` | shell and frame work, Playwright specs, polish, remediation of review findings | cross-cutting, visible everywhere, easy to regress |
+| `medium` | narrowly scoped fixes with a known cause and a measurable target, such as the iCalendar escaping and the rail geometry | the reasoning is already done in the brief; more effort buys nothing |
+
+Independent review stays with Codex `gpt-6-astra`, read-only.
