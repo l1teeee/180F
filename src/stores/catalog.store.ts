@@ -4,6 +4,7 @@
 // from hydration onward, which is the only store every screen reads for studio identity.
 import { create } from 'zustand';
 import type { ClassType, DemoDataset, MembershipPlan, Organization } from '@/domain/types';
+import { scheduleSnapshotWrite } from './demo-persistence';
 
 type CatalogOrganization = Pick<Organization, 'id' | 'logo'>;
 
@@ -12,6 +13,10 @@ interface CatalogState {
   classTypes: ClassType[];
   membershipPlans: MembershipPlan[];
   setCatalog: (data: Pick<DemoDataset, 'organization' | 'classTypes' | 'membershipPlans'>) => void;
+  // Bulk restore of just the mutable slice (ADR-022): unlike setCatalog, this leaves
+  // organization/classTypes alone, since a restored snapshot never carries the always-
+  // regenerated static reference data.
+  setMembershipPlans: (membershipPlans: MembershipPlan[]) => void;
   updatePlan: (planId: string, changes: Partial<Omit<MembershipPlan, 'id'>>) => void;
 }
 
@@ -27,8 +32,12 @@ export const useCatalogStore = create<CatalogState>()((set) => ({
       membershipPlans: data.membershipPlans,
     }),
 
-  updatePlan: (planId, changes) =>
+  setMembershipPlans: (membershipPlans) => set({ membershipPlans }),
+
+  updatePlan: (planId, changes) => {
     set((state) => ({
       membershipPlans: state.membershipPlans.map((plan) => (plan.id === planId ? { ...plan, ...changes } : plan)),
-    })),
+    }));
+    scheduleSnapshotWrite();
+  },
 }));

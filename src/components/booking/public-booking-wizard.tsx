@@ -83,11 +83,16 @@ export function PublicBookingWizard({ initialClassId }: { initialClassId: string
             onBack={wizard.goBack}
             onChooseAnotherTime={wizard.chooseAnotherTime}
           />
-        ) : wizard.step === 5 && wizard.confirmedBooking && wizard.selection.classType && wizard.selection.session ? (
+        ) : wizard.step === 5 && wizard.confirmedBooking && wizard.confirmedSelection ? (
+          // Built from confirmedBooking/confirmedSelection only - the frozen pair the wizard
+          // hook sets together at the moment a submission actually succeeds - never from
+          // `wizard.selection`, which keeps changing as the visitor moves through the wizard and
+          // would otherwise let a later selection change show through on a confirmation for an
+          // earlier, already-committed booking.
           <BookingSuccess
             booking={wizard.confirmedBooking}
-            classType={wizard.selection.classType}
-            session={wizard.selection.session}
+            classType={wizard.confirmedSelection.classType}
+            session={wizard.confirmedSelection.session}
             onBookAnother={wizard.startOver}
           />
         ) : (

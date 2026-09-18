@@ -26,16 +26,19 @@ test.describe('Dashboard -> New Booking -> Create -> Booking appears', () => {
     await dashboardPage.goto();
     const beforeCount = await dashboardPage.kpiValue("Today's bookings");
 
-    // Client-side nav (sidebar link), not page.goto(): the demo dataset lives only in memory
-    // (ADR-005 "data resets on reload"), and page.goto() is a real browser navigation that
-    // would silently regenerate a fresh dataset and erase the booking this test is about to
-    // create - defeating the cross-screen comparison below.
+    // Client-side nav (sidebar link) between the two dashboard reads, so this test's own cross-
+    // screen comparison stays isolated from ADR-022's separately-covered persistence behaviour
+    // (e2e/08-demo-persistence.spec.ts asserts a full page.goto() navigation specifically).
     await appShell.goTo('Bookings');
     await bookingsPage.newBookingButton.click();
 
     const customerName = 'Customer 01';
     const todayLabel = format(new Date(), 'MMM d, yyyy'); // matches DISPLAY_DATE_FORMAT
-    const className = await bookingDialog.selectFirstSessionOnDate(customerName, todayLabel);
+    // A confirmed booking, not a waitlisted one: ADR-023 excludes the waitlist from this KPI, so
+    // whichever session comes first on the target date must actually have room.
+    const className = await bookingDialog.selectFirstOpenSessionOnDate(customerName, todayLabel, () =>
+      bookingsPage.newBookingButton.click(),
+    );
 
     await expect(bookingDialog.capacityText).toBeVisible();
     await bookingDialog.submitButton.click();

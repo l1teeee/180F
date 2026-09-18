@@ -77,21 +77,15 @@ export function DataTable<Row>({
 }: DataTableProps<Row>) {
   const [page, setPage] = useState(0);
 
-  // The caller's filters/search can shrink `rows` out from under the current page - without
-  // this the view can strand itself on a now-empty page instead of showing page 1 again. Reset
-  // during render (React's documented "adjusting state when a prop changes" pattern) rather
-  // than in an effect, since callers memoise `rows` (docs/08-STATE-MANAGEMENT.md section 6), so
-  // its identity only changes when the underlying data actually did.
-  const [prevRows, setPrevRows] = useState(rows);
-  if (rows !== prevRows) {
-    setPrevRows(rows);
-    setPage(0);
-  }
-
   if (rows.length === 0) {
     return emptyState ? <>{emptyState}</> : null;
   }
 
+  // A row mutating in place (e.g. a row action like cancel) gives `rows` a new identity on every
+  // render without necessarily changing how many pages exist - clamping (rather than forcing
+  // page back to 0 whenever `rows` changes at all) is what keeps the user on their current page
+  // unless it no longer exists, e.g. the caller's filters/search shrinking the set out from
+  // under it.
   const pageCount = Math.max(1, Math.ceil(rows.length / pageSize));
   const clampedPage = Math.min(page, pageCount - 1);
   const start = clampedPage * pageSize;

@@ -1,7 +1,8 @@
-// RFC 5545 section 3.3.11 TEXT escaping and section 3.1 line folding, used when building the
-// booking confirmation .ics file. Values like the studio address and class name are editable
-// by the administrator (Settings, class editing) and must never let CR/LF splice a new
-// property or component into the calendar file.
+// RFC 5545 section 3.3.11 TEXT escaping, section 3.1 line folding, and the section 3.8.7.2
+// DTSTAMP timestamp, used when building the booking confirmation .ics file. Values like the
+// studio address and class name are editable by the administrator (Settings, class editing)
+// and must never let CR/LF splice a new property or component into the calendar file.
+import type { ISODateTime } from '@/domain/types'
 
 // Order matters: backslash must be escaped first, or the backslashes this function inserts
 // for ;/,/\n would themselves get re-escaped.
@@ -40,4 +41,21 @@ export function foldIcsLine(line: string): string {
   return chunks
     .map((chunk, index) => (index === 0 ? chunk : ` ${chunk}`))
     .join("\r\n")
+}
+
+// RFC 5545 section 3.8.7.2: every VEVENT requires DTSTAMP, "the date and time that the
+// instance of the iCalendar object was created", always in UTC regardless of the event's own
+// timezone. `dateTime` always carries an explicit UTC offset (ISODateTime, never the host
+// machine's local time - docs/04-DOMAIN-MODEL.md section 7 invariant 6), so `Date` parses it
+// to the correct absolute instant and the UTC getters below convert it without a timezone
+// lookup of their own or any use of the real clock (ADR-005).
+export function formatIcsUtcTimestamp(dateTime: ISODateTime): string {
+  const instant = new Date(dateTime)
+  const year = instant.getUTCFullYear()
+  const month = String(instant.getUTCMonth() + 1).padStart(2, "0")
+  const day = String(instant.getUTCDate()).padStart(2, "0")
+  const hours = String(instant.getUTCHours()).padStart(2, "0")
+  const minutes = String(instant.getUTCMinutes()).padStart(2, "0")
+  const seconds = String(instant.getUTCSeconds()).padStart(2, "0")
+  return `${year}${month}${day}T${hours}${minutes}${seconds}Z`
 }

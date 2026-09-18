@@ -84,8 +84,11 @@ export function SessionDetailsSheet({ sessionId, onOpenChange }: SessionDetailsS
             </div>
 
             <SheetFooter className="flex-row justify-end gap-3">
+              {/* Carries the session in the URL (not just component state) so this link stays
+                  shareable and lands the bookings table pre-filtered to this session
+                  (docs/06 section 3.3/3.4). */}
               <Button variant="secondary" asChild>
-                <Link href="/bookings">View bookings</Link>
+                <Link href={`/bookings?sessionId=${encodeURIComponent(sessionId ?? '')}`}>View bookings</Link>
               </Button>
               <Button
                 variant="primary"

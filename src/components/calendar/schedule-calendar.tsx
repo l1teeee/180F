@@ -32,6 +32,17 @@ export interface ScheduleCalendarProps {
 // carries the class type, so this label carries the fact colour alone cannot - overbooked (an
 // explicit warning icon, task brief: "must read overbooked and say so explicitly rather than
 // hiding it behind the clamp") or, failing that, the raw booked/capacity count.
+// docs/04-DOMAIN-MODEL.md invariant 8: wall-clock times pass through unconverted, for every
+// viewer. `demoNow` always carries the fixed studio "-05:00" offset (src/domain/types/
+// primitives.ts) - handing it straight to FullCalendar's `now` prop would let FullCalendar
+// convert it to the viewer's own browser timezone, same bug as the event times this component
+// renders (see use-calendar-events.ts's wallClockDateTime for the matching fix on those).
+// `initialDate` gets no such treatment: `demoToday` is a bare 'YYYY-MM-DD' with no time or
+// offset to convert in the first place.
+function stripOffset(dateTime: ISODateTime): string {
+  return dateTime.replace(/[+-]\d{2}:\d{2}$/, '');
+}
+
 function renderEventContent(arg: EventContentArg) {
   const props = arg.event.extendedProps as CalendarSessionEventProps;
   return (
@@ -76,7 +87,7 @@ export default function ScheduleCalendar({
         initialView={initialView}
         // ADR-018: initialDate/now read the demo clock, never new Date().
         initialDate={demoToday}
-        now={demoNow}
+        now={stripOffset(demoNow)}
         headerToolbar={false}
         height="100%"
         firstDay={1}

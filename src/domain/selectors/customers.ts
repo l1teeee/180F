@@ -29,8 +29,23 @@ export function selectCustomerStats(
   membershipPlans: MembershipPlan[],
   demoToday: ISODate,
 ): CustomerWithStats {
-  const sessionById = new Map(sessions.map((session) => [session.id, session]));
   const customerBookings = bookings.filter((booking) => booking.customerId === customer.id);
+  return selectCustomerStatsFromBookings(customer, customerBookings, sessions, membershipPlans, demoToday);
+}
+
+// Same computation as selectCustomerStats, but takes this customer's bookings already filtered
+// out of the ledger. docs/08-STATE-MANAGEMENT.md section 8.8: a caller resolving many customers
+// at once (the customers table, ~148 rows against a ~1,200-booking ledger) builds
+// indexBookingsByCustomer(bookings) once and passes each customer's slice here, instead of
+// selectCustomerStats rescanning the full ledger inside every row's call.
+export function selectCustomerStatsFromBookings(
+  customer: Customer,
+  customerBookings: Booking[],
+  sessions: ClassSession[],
+  membershipPlans: MembershipPlan[],
+  demoToday: ISODate,
+): CustomerWithStats {
+  const sessionById = new Map(sessions.map((session) => [session.id, session]));
 
   let lastVisit: ISODate | null = null;
   let classesThisMonth = 0;

@@ -32,7 +32,7 @@ export function TimeStep({
         <button
           type="button"
           onClick={onBack}
-          className="flex w-fit items-center gap-1 text-sm font-semibold text-text-secondary transition-colors duration-[var(--duration-base)] ease-out hover:text-ink"
+          className="relative flex w-fit items-center gap-1 text-sm font-semibold text-text-secondary transition-colors duration-[var(--duration-base)] ease-out before:absolute before:-inset-x-2 before:-inset-y-3 before:content-[''] hover:text-ink"
         >
           <ChevronLeft className="size-4" aria-hidden="true" />
           Change date

@@ -2,7 +2,8 @@
 import { describe, expect, it } from 'vitest';
 import type { Booking, ClassSession, Customer, MembershipPlan } from '@/domain/types';
 import { buildDemoDataset } from '@/data/seed';
-import { selectCustomerStats } from './customers';
+import { indexBookingsByCustomer } from './bookings';
+import { selectCustomerStats, selectCustomerStatsFromBookings } from './customers';
 
 const DEMO_TODAY = '2026-09-17';
 
@@ -158,5 +159,39 @@ describe('selectCustomerStats over the real dataset', () => {
 
     expect(sawLimited).toBe(true);
     expect(sawUnlimited).toBe(true);
+  });
+});
+
+// docs/08-STATE-MANAGEMENT.md section 8.8: use-customers-rows.ts builds indexBookingsByCustomer
+// once per render and passes each customer's slice here instead of selectCustomerStats
+// rescanning the full ledger per row. This proves that real usage pattern produces exactly the
+// same view model as the full-ledger call for every customer, not just a hand-picked one.
+describe('selectCustomerStatsFromBookings', () => {
+  const sessions = [
+    makeSession({ id: 'ses-a', date: '2026-09-10' }),
+    makeSession({ id: 'ses-b', date: '2026-09-11' }),
+  ];
+  const customerA = makeCustomer({ id: 'cus-0001' });
+  const customerB = makeCustomer({ id: 'cus-0002' });
+  const bookings: Booking[] = [
+    makeBooking({ id: 'bkg-a1', customerId: 'cus-0001', sessionId: 'ses-a' }),
+    makeBooking({ id: 'bkg-a2', customerId: 'cus-0001', sessionId: 'ses-b' }),
+    makeBooking({ id: 'bkg-b1', customerId: 'cus-0002', sessionId: 'ses-a' }),
+  ];
+
+  it("matches selectCustomerStats when given each customer's bookings pre-filtered by an index", () => {
+    const bookingsByCustomer = indexBookingsByCustomer(bookings);
+
+    for (const customer of [customerA, customerB]) {
+      const viaFullLedger = selectCustomerStats(customer, bookings, sessions, [BASIC_PLAN], DEMO_TODAY);
+      const viaIndex = selectCustomerStatsFromBookings(
+        customer,
+        bookingsByCustomer.get(customer.id) ?? [],
+        sessions,
+        [BASIC_PLAN],
+        DEMO_TODAY,
+      );
+      expect(viaIndex).toEqual(viaFullLedger);
+    }
   });
 });

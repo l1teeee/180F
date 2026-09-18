@@ -15,6 +15,7 @@ import {
 import { bookingRepository } from '@/services/repositories';
 import { serialize } from './mutation-queue';
 import { useCustomerStore } from './customer.store';
+import { scheduleSnapshotWrite } from './demo-persistence';
 import { useDemoRuntimeStore } from './demo-runtime.store';
 import { useNotificationStore } from './notification.store';
 import { useSessionStore } from './session.store';
@@ -132,6 +133,7 @@ export const useBookingStore = create<BookingState>()((set, get) => ({
             description: `${customer.name} booked a spot.`,
             createdAt: demoNow,
           });
+          scheduleSnapshotWrite();
         }
         return result;
       } finally {
@@ -224,6 +226,7 @@ export const useBookingStore = create<BookingState>()((set, get) => ({
             description: `${customer.name} booked a spot.`,
             createdAt: demoNow,
           });
+          scheduleSnapshotWrite();
         }
         return result;
       } finally {
@@ -288,6 +291,7 @@ export const useBookingStore = create<BookingState>()((set, get) => ({
             description: customer ? `${customer.name} cancelled a booking.` : 'A booking was cancelled.',
             createdAt: demoNow,
           });
+          scheduleSnapshotWrite();
         }
         return result;
       } finally {
@@ -308,6 +312,7 @@ export const useBookingStore = create<BookingState>()((set, get) => ({
             b.id === bookingId && b.status === 'confirmed' ? { ...b, checkedInAt: demoNow } : b,
           ),
         }));
+        scheduleSnapshotWrite();
       } finally {
         set({ mutation: 'idle' });
       }
@@ -347,6 +352,7 @@ export const useBookingStore = create<BookingState>()((set, get) => ({
           result = { ok: true, booking: promoted };
           return { bookings: state.bookings.map((b) => (b.id === bookingId ? promoted : b)) };
         });
+        if (result.ok) scheduleSnapshotWrite();
         return result;
       } finally {
         set({ mutation: 'idle' });

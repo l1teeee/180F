@@ -10,6 +10,7 @@ import { useAutomationStore } from './automation.store';
 import { useBookingStore } from './booking.store';
 import { useCatalogStore } from './catalog.store';
 import { useCustomerStore } from './customer.store';
+import { clearSnapshot, readSnapshot, registerCrossTabSync, writeSnapshot } from './demo-persistence';
 import { useInstructorStore } from './instructor.store';
 import { useNotificationStore } from './notification.store';
 import { useSessionStore } from './session.store';
@@ -25,6 +26,10 @@ interface DemoRuntimeState {
   hydrateDemo: () => Promise<void>;
   retryHydration: () => Promise<void>;
   resetDemo: () => void;
+  // ADR-022: deletes today's localStorage snapshot and reseeds from scratch. Distinct from the
+  // plain resetDemo() above (a synchronous status reset with no repository call, no storage
+  // access and no re-seed) - this is the "Reset demo data" presenter action.
+  resetDemoData: () => Promise<void>;
 }
 
 // ADR-018: `new Date()` appears only here (to resolve the calendar date) and inside
@@ -48,15 +53,23 @@ export const useDemoRuntimeStore = create<DemoRuntimeState>()((set, get) => ({
     if (status === 'loading' || status === 'ready') return; // 'error' may retry
     set({ status: 'loading', error: null });
     try {
-      const dataset = await loadDemoDataset(todayISO());
+      const demoToday = todayISO();
+      // Class types, instructors, the organization record and demoNow are always regenerated
+      // from the deterministic seed (ADR-022) - only the seven user-changeable slices below are
+      // ever overridden by a restored snapshot.
+      const dataset = await loadDemoDataset(demoToday);
+      const snapshot = readSnapshot(demoToday);
+
       useCatalogStore.getState().setCatalog(dataset);
       useInstructorStore.getState().setInstructors(dataset.instructors);
-      useCustomerStore.getState().setCustomers(dataset.customers);
-      useSessionStore.getState().setSessions(dataset.sessions);
-      useBookingStore.getState().setBookings(dataset.bookings);
-      useAutomationStore.getState().setAutomations(dataset.automations);
-      useNotificationStore.getState().setNotifications(dataset.notifications);
-      useSettingsStore.getState().setSettings(dataset.settings);
+      useCustomerStore.getState().setCustomers(snapshot?.customers ?? dataset.customers);
+      useSessionStore.getState().setSessions(snapshot?.sessions ?? dataset.sessions);
+      useBookingStore.getState().setBookings(snapshot?.bookings ?? dataset.bookings);
+      useAutomationStore.getState().setAutomations(snapshot?.automations ?? dataset.automations);
+      useNotificationStore.getState().setNotifications(snapshot?.notifications ?? dataset.notifications);
+      useSettingsStore.getState().setSettings(snapshot?.settings ?? dataset.settings);
+      if (snapshot) useCatalogStore.getState().setMembershipPlans(snapshot.membershipPlans);
+
       set({ status: 'ready', demoToday: dataset.demoToday, demoNow: dataset.demoNow, error: null });
     } catch (err) {
       set({ status: 'error', error: err instanceof Error ? err.message : 'Unknown error' });
@@ -69,4 +82,21 @@ export const useDemoRuntimeStore = create<DemoRuntimeState>()((set, get) => ({
   retryHydration: () => get().hydrateDemo(),
 
   resetDemo: () => set({ status: 'idle', demoToday: null, demoNow: null, error: null }),
+
+  resetDemoData: async () => {
+    const { demoToday } = get();
+    if (demoToday) clearSnapshot(demoToday);
+    set({ status: 'idle', demoToday: null, demoNow: null, error: null });
+    await get().hydrateDemo();
+    // Write immediately (not debounced): the reset is itself a committed change, and an other
+    // tab's `storage` listener needs a real newValue to apply rather than the transient null
+    // removeItem left behind above.
+    const freshToday = get().demoToday;
+    if (freshToday) writeSnapshot(freshToday);
+  },
 }));
+
+// Registered once per browser tab (module evaluation is a singleton): a booking made in another
+// tab arrives here as a `storage` event and is applied without a reload (ADR-022). Guarded
+// internally for `typeof window === 'undefined'`, so this is a no-op during SSR.
+registerCrossTabSync(() => useDemoRuntimeStore.getState().demoToday);

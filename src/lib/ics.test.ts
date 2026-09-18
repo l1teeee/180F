@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { escapeIcsText, foldIcsLine } from "@/lib/ics"
+import { escapeIcsText, foldIcsLine, formatIcsUtcTimestamp } from "@/lib/ics"
 
 describe("escapeIcsText", () => {
   it("leaves plain text unchanged", () => {
@@ -56,5 +56,21 @@ describe("foldIcsLine", () => {
     }
     // Unfolding (strip CRLF + following space) must reconstruct the original line.
     expect(folded.replaceAll("\r\n ", "")).toBe(line)
+  })
+})
+
+describe("formatIcsUtcTimestamp", () => {
+  it("formats a studio-local (-05:00) ISODateTime as a UTC DTSTAMP value", () => {
+    // 09:00 at -05:00 is 14:00 UTC.
+    expect(formatIcsUtcTimestamp("2026-09-17T09:00:00.000-05:00")).toBe("20260917T140000Z")
+  })
+
+  it("carries a UTC day rollover from the offset conversion", () => {
+    // 22:30 at -05:00 is 03:30 UTC the next calendar day.
+    expect(formatIcsUtcTimestamp("2026-09-17T22:30:00.000-05:00")).toBe("20260918T033000Z")
+  })
+
+  it("passes an already-UTC ISODateTime through unchanged", () => {
+    expect(formatIcsUtcTimestamp("2026-01-01T00:00:00.000Z")).toBe("20260101T000000Z")
   })
 })

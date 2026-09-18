@@ -55,8 +55,9 @@ export function CustomerStep({
       <div className="flex flex-col gap-1.5">
         <button
           type="button"
+          disabled={isPending}
           onClick={onBack}
-          className="flex w-fit items-center gap-1 text-sm font-semibold text-text-secondary transition-colors duration-[var(--duration-base)] ease-out hover:text-ink"
+          className="relative flex w-fit items-center gap-1 text-sm font-semibold text-text-secondary transition-colors duration-[var(--duration-base)] ease-out before:absolute before:-inset-x-2 before:-inset-y-3 before:content-[''] hover:text-ink disabled:pointer-events-none disabled:opacity-50"
         >
           <ChevronLeft className="size-4" aria-hidden="true" />
           Change time
@@ -137,7 +138,7 @@ export function CustomerStep({
               <button
                 type="button"
                 onClick={onChooseAnotherTime}
-                className="w-fit font-semibold underline underline-offset-2"
+                className="relative w-fit font-semibold underline underline-offset-2 before:absolute before:-inset-x-2 before:-inset-y-3 before:content-['']"
               >
                 Choose a different time
               </button>

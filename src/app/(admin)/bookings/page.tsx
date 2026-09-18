@@ -4,7 +4,8 @@
 // open the same BookingDialog; cancelling reuses the shared destructive ConfirmDialog
 // (docs/03-DESIGN-SYSTEM.md section 11.4-B) with override: true (docs/08-STATE-MANAGEMENT.md
 // section 8.3: "Admin actions may pass an explicit override: true").
-import { useMemo, useState } from 'react';
+import { Suspense, useMemo, useState } from 'react';
+import { X } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/layout/page-header';
 import { SectionCard } from '@/components/shared/section-card';
@@ -19,15 +20,28 @@ import { BookingsTable } from '@/components/bookings/bookings-table';
 import { StatusTabs } from '@/components/bookings/status-tabs';
 import type { BookingFilters, BookingRow } from '@/domain/types';
 import { useBookingRows } from '@/hooks/use-booking-rows';
+import { useBookingsSessionFilter } from '@/hooks/use-bookings-session-filter';
 import { useBookingsTabCounts, type BookingsTabKey } from '@/hooks/use-bookings-tab-counts';
 import { useDemoStatus } from '@/hooks/use-demo-status';
-import { formatDisplayDateShort } from '@/lib/dates';
+import { useSessionCard } from '@/hooks/use-session-card';
+import { formatDisplayDateShort, formatDisplayTime } from '@/lib/dates';
 import { useBookingStore } from '@/stores/booking.store';
 import { useDemoRuntimeStore } from '@/stores/demo-runtime.store';
 
 const EMPTY_FILTERS: BookingFilters = { query: '', status: 'all', source: 'all', date: null };
 
+// next/navigation's useSearchParams (read inside useBookingsSessionFilter) requires a Suspense
+// boundary above it - this page is entirely client-rendered (ADR-004: no server data fetching),
+// so that boundary never actually suspends past its first paint.
 export default function BookingsPage() {
+  return (
+    <Suspense fallback={null}>
+      <BookingsPageContent />
+    </Suspense>
+  );
+}
+
+function BookingsPageContent() {
   const status = useDemoStatus();
   const [filters, setFilters] = useState<BookingFilters>(EMPTY_FILTERS);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -41,6 +55,8 @@ export default function BookingsPage() {
   );
   const tabCounts = useBookingsTabCounts(tabFilters);
   const rows = useBookingRows(filters);
+  const sessionFilter = useBookingsSessionFilter(rows);
+  const filteredSession = useSessionCard(sessionFilter.sessionId ?? '');
 
   function handleTabChange(tab: BookingsTabKey) {
     setFilters((prev) => ({ ...prev, status: tab }));
@@ -95,8 +111,19 @@ export default function BookingsPage() {
         ) : (
           <div className="flex flex-col gap-5">
             <BookingFiltersBar filters={filters} onFiltersChange={setFilters} onReset={() => setFilters(EMPTY_FILTERS)} />
+            {sessionFilter.sessionId ? (
+              <div className="flex flex-wrap items-center gap-2 rounded-chip border border-purple-soft bg-purple-xsoft px-3.5 py-2.5 text-sm text-purple-deep">
+                <span className="font-medium">
+                  Filtered to session: {filteredSession ? `${filteredSession.classType.name} · ${formatDisplayDateShort(filteredSession.date)} · ${formatDisplayTime(filteredSession.startTime)}` : sessionFilter.sessionId}
+                </span>
+                <Button type="button" variant="ghost" onClick={sessionFilter.clear} className="ml-auto h-7 shrink-0 px-2 text-purple-deep hover:bg-purple-soft">
+                  <X aria-hidden="true" className="h-3.5 w-3.5" />
+                  Clear
+                </Button>
+              </div>
+            ) : null}
             <StatusTabs value={filters.status} onValueChange={handleTabChange} counts={tabCounts} />
-            <BookingsTable rows={rows} onCancelRequest={setCancelTarget} onCreateBooking={() => setDialogOpen(true)} />
+            <BookingsTable rows={sessionFilter.rows} onCancelRequest={setCancelTarget} onCreateBooking={() => setDialogOpen(true)} />
           </div>
         )}
       </SectionCard>

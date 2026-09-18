@@ -3,6 +3,7 @@
 // WhatsApp preview UI has something to show a pending state for.
 import { create } from 'zustand';
 import type { Automation, AutomationStatus } from '@/domain/types';
+import { scheduleSnapshotWrite } from './demo-persistence';
 
 // A fixed UI-feedback delay, not a data-latency simulation (src/services/repositories/latency.ts
 // is a different concern - see that file's own comment) - a constant is already deterministic.
@@ -23,12 +24,14 @@ export const useAutomationStore = create<AutomationState>()((set) => ({
 
   setAutomations: (automations) => set({ automations }),
 
-  toggleAutomation: (automationId, status) =>
+  toggleAutomation: (automationId, status) => {
     set((state) => ({
       automations: state.automations.map((automation) =>
         automation.id === automationId ? { ...automation, status } : automation,
       ),
-    })),
+    }));
+    scheduleSnapshotWrite();
+  },
 
   sendTestMessage: async (automationId) => {
     set({ sending: automationId });

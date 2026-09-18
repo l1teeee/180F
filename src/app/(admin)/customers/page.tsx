@@ -3,7 +3,8 @@
 // docs/06-ROUTES-AND-SCREENS.md section 3.5. KPI row -> FilterBar -> paginated CustomersTable.
 // docs/08-STATE-MANAGEMENT.md section 8.4: while status isn't 'ready', every stat card and the
 // table show a loading skeleton; on 'error', ErrorState with a working retry (this phase's brief).
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { CreditCard, UserPlus, Users, UserX } from 'lucide-react';
 import { CustomersFilterBar } from '@/components/customers/customers-filter-bar';
 import { CustomersTable } from '@/components/customers/customers-table';
@@ -21,13 +22,22 @@ import { useDemoRuntimeStore } from '@/stores/demo-runtime.store';
 
 const INITIAL_FILTERS: CustomerFilters = { query: '', status: 'all', membershipId: 'all' };
 
-export default function CustomersPage() {
+// The Memberships page's "View members" action (src/app/(admin)/memberships/page.tsx) links
+// here as `/customers?membershipId=<planId>` - this reads that query param once on mount so the
+// membership filter arrives pre-applied, both for that in-app link and for a direct deep link to
+// the URL. useSearchParams requires a Suspense boundary (Next.js App Router), hence the wrapper
+// default export below (same pattern as src/app/book/page.tsx around its wizard's `?step=`).
+function CustomersPageContent() {
+  const searchParams = useSearchParams();
   const status = useDemoStatus();
   // Direct store reads for `error`/retry (not routed through a src/hooks binding) match the
   // existing precedent in src/components/booking/booking-error-state.tsx for this exact
   // infra-level concern - narrower than a business-data selector, so it stays inline per view.
   const error = useDemoRuntimeStore((state) => state.error);
-  const [filters, setFilters] = useState<CustomerFilters>(INITIAL_FILTERS);
+  const [filters, setFilters] = useState<CustomerFilters>(() => ({
+    ...INITIAL_FILTERS,
+    membershipId: searchParams.get('membershipId') ?? 'all',
+  }));
   const kpis = useCustomersKpis();
   const membershipPlans = useCustomersMembershipPlans();
   const rows = useCustomersRows(filters);
@@ -62,5 +72,22 @@ export default function CustomersPage() {
         {status !== 'ready' ? <LoadingSkeleton variant="table-row" count={6} /> : <CustomersTable rows={rows} />}
       </SectionCard>
     </div>
+  );
+}
+
+function CustomersPageFallback() {
+  return (
+    <div className="flex flex-col gap-6">
+      <PageHeader title="Customers" subtitle="Membership roster, activity and status." />
+      <LoadingSkeleton variant="kpi" count={4} className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4" />
+    </div>
+  );
+}
+
+export default function CustomersPage() {
+  return (
+    <Suspense fallback={<CustomersPageFallback />}>
+      <CustomersPageContent />
+    </Suspense>
   );
 }

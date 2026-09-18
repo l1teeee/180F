@@ -2,7 +2,7 @@
 // not customers.length, per ADR-016 (132 active out of 148 total customers).
 import type { Booking, ClassSession, Customer, DashboardKpis, ISODate } from '@/domain/types';
 import { addDaysISO } from '@/lib/dates';
-import { indexBookingsBySession } from './bookings';
+import { indexBookingsBySession, selectBookingCountsByDate } from './bookings';
 import { selectSessionOccupancy } from './sessions';
 import { selectActiveMembers, selectNewThisMonth } from './customers';
 
@@ -15,16 +15,13 @@ export function selectDashboardKpis(
   const activeMembers = selectActiveMembers(customers);
   const activeMembersDelta = selectNewThisMonth(customers, demoToday);
 
-  const sessionById = new Map(sessions.map((session) => [session.id, session]));
+  // ADR-023: todayBookings is the exact same confirmed-or-pending-today count the weekly
+  // chart's highlighted bar reads (selectWeeklyBookingTrend, bookings.ts) - one selector owns
+  // the definition, so the KPI and the chart can never disagree.
   const yesterday = addDaysISO(demoToday, -1);
-
-  let todayBookingsCount = 0;
-  let yesterdayBookingsCount = 0;
-  for (const booking of bookings) {
-    const date = sessionById.get(booking.sessionId)?.date;
-    if (date === demoToday) todayBookingsCount += 1;
-    else if (date === yesterday) yesterdayBookingsCount += 1;
-  }
+  const bookingCountsByDate = selectBookingCountsByDate(bookings, sessions);
+  const todayBookingsCount = bookingCountsByDate.get(demoToday) ?? 0;
+  const yesterdayBookingsCount = bookingCountsByDate.get(yesterday) ?? 0;
   const todayBookingsDeltaPct =
     yesterdayBookingsCount > 0
       ? ((todayBookingsCount - yesterdayBookingsCount) / yesterdayBookingsCount) * 100

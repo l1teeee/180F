@@ -1,5 +1,6 @@
 // docs/08-STATE-MANAGEMENT.md section 4 / docs/11-TEST-PLAN.md section 3.
 import { describe, expect, it } from 'vitest';
+import type { Booking } from '@/domain/types';
 import { buildDemoDataset } from '@/data/seed';
 import { selectDashboardKpis } from './dashboard';
 import { selectWeeklyBookingTrend } from './bookings';
@@ -21,9 +22,11 @@ describe('selectDashboardKpis', () => {
     expect(kpis.activeMembersDelta).toBe(expected);
   });
 
-  it('todayBookings counts only bookings for sessions on demoToday', () => {
+  it('todayBookings counts only confirmed or pending bookings for sessions on demoToday (ADR-023)', () => {
     const sessionById = new Map(dataset.sessions.map((s) => [s.id, s]));
-    const expected = dataset.bookings.filter((b) => sessionById.get(b.sessionId)?.date === DEMO_TODAY).length;
+    const expected = dataset.bookings.filter(
+      (b) => (b.status === 'confirmed' || b.status === 'pending') && sessionById.get(b.sessionId)?.date === DEMO_TODAY,
+    ).length;
     expect(kpis.todayBookings).toBe(expected);
   });
 
@@ -77,13 +80,82 @@ describe('selectWeeklyBookingTrend', () => {
     expect(points[5].label).toBe('Wed');
   });
 
-  it('excludes cancelled bookings from the count', () => {
+  it('counts only confirmed or pending bookings, excluding cancelled and waitlist (ADR-023)', () => {
     const sessionById = new Map(dataset.sessions.map((s) => [s.id, s]));
     for (const point of points) {
       const expected = dataset.bookings.filter(
-        (b) => b.status !== 'cancelled' && sessionById.get(b.sessionId)?.date === point.date,
+        (b) => (b.status === 'confirmed' || b.status === 'pending') && sessionById.get(b.sessionId)?.date === point.date,
       ).length;
       expect(point.bookings).toBe(expected);
     }
+  });
+});
+
+// ADR-023: "a booking counts toward a day when its session is on that day and its status is
+// confirmed or pending" is defined once (selectBookingCountsByDate, bookings.ts) and read by
+// both selectDashboardKpis's todayBookings and selectWeeklyBookingTrend's last point. These
+// tests drive both selectors off the same mutated booking lists to prove they can never diverge.
+describe('ADR-023: the KPI and the weekly chart\'s today bar agree', () => {
+  const dataset = buildDemoDataset(DEMO_TODAY);
+  const sessionById = new Map(dataset.sessions.map((s) => [s.id, s]));
+  const todaySession = dataset.sessions.find((s) => s.date === DEMO_TODAY);
+  if (!todaySession) throw new Error('fixture expectation: at least one session on demoToday');
+  const todaySessionId = todaySession.id;
+
+  function todayCounts(bookings: Booking[]) {
+    const kpis = selectDashboardKpis(dataset.customers, bookings, dataset.sessions, DEMO_TODAY);
+    const trend = selectWeeklyBookingTrend(bookings, dataset.sessions, DEMO_TODAY);
+    return { kpi: kpis.todayBookings, chart: trend[trend.length - 1].bookings };
+  }
+
+  function makeBooking(overrides: Partial<Booking>): Booking {
+    return {
+      id: 'bkg-adr023-test',
+      customerId: dataset.customers[0].id,
+      sessionId: todaySessionId,
+      status: 'confirmed',
+      source: 'reception',
+      createdAt: `${DEMO_TODAY}T09:00:00.000-05:00`,
+      checkedInAt: null,
+      cancelledAt: null,
+      ...overrides,
+    };
+  }
+
+  it('the KPI and the chart\'s today bar are the same number', () => {
+    const { kpi, chart } = todayCounts(dataset.bookings);
+    expect(kpi).toBe(chart);
+    expect(kpi).toBeGreaterThan(0);
+  });
+
+  it('creating a confirmed booking for today raises both by exactly one', () => {
+    const before = todayCounts(dataset.bookings);
+    const after = todayCounts([...dataset.bookings, makeBooking({ status: 'confirmed' })]);
+    expect(after.kpi).toBe(before.kpi + 1);
+    expect(after.chart).toBe(before.chart + 1);
+    expect(after.kpi).toBe(after.chart);
+  });
+
+  it('cancelling a confirmed or pending booking for today lowers both by exactly one', () => {
+    const target = dataset.bookings.find(
+      (b) => (b.status === 'confirmed' || b.status === 'pending') && sessionById.get(b.sessionId)?.date === DEMO_TODAY,
+    );
+    if (!target) throw new Error('fixture expectation: at least one confirmed/pending booking today');
+
+    const before = todayCounts(dataset.bookings);
+    const cancelled = dataset.bookings.map((b) =>
+      b.id === target.id ? { ...b, status: 'cancelled' as const, cancelledAt: `${DEMO_TODAY}T09:30:00.000-05:00` } : b,
+    );
+    const after = todayCounts(cancelled);
+    expect(after.kpi).toBe(before.kpi - 1);
+    expect(after.chart).toBe(before.chart - 1);
+    expect(after.kpi).toBe(after.chart);
+  });
+
+  it('a waitlist booking for today changes neither the KPI nor the chart bar', () => {
+    const before = todayCounts(dataset.bookings);
+    const after = todayCounts([...dataset.bookings, makeBooking({ id: 'bkg-adr023-waitlist', status: 'waitlist' })]);
+    expect(after.kpi).toBe(before.kpi);
+    expect(after.chart).toBe(before.chart);
   });
 });

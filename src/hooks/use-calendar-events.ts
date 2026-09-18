@@ -6,8 +6,7 @@
 import { useMemo } from 'react';
 import type { EventInput } from '@fullcalendar/core';
 import { indexBookingsBySession, toSessionCard } from '@/domain/selectors';
-import type { AccentToken, OccupancyState } from '@/domain/types';
-import { buildISODateTime } from '@/lib/dates';
+import type { AccentToken, ISODate, OccupancyState, TimeOfDay } from '@/domain/types';
 import { useBookingStore } from '@/stores/booking.store';
 import { useCatalogStore } from '@/stores/catalog.store';
 import { useInstructorStore } from '@/stores/instructor.store';
@@ -41,6 +40,17 @@ const ACCENT_EVENT_COLOR: Record<AccentToken, { background: string; border: stri
   blue: { background: 'var(--color-blue-soft)', border: 'var(--color-blue)' },
 };
 
+// docs/04-DOMAIN-MODEL.md invariant 8: every date in this demo is studio-local wall-clock and no
+// timezone conversion happens anywhere. buildISODateTime (src/lib/dates.ts) exists for storage
+// and notification-offset math and always carries the fixed "-05:00" studio offset - handing that
+// straight to FullCalendar makes it convert to the viewer's own browser timezone (Codex repro: a
+// viewer machine at UTC-6 rendered a 6:00 AM "-05:00" session at 5:00 AM). Building a bare
+// wall-clock string here instead (no offset) makes FullCalendar treat the digits literally, so
+// the same session renders at the same hour for every viewer regardless of their timezone.
+function wallClockDateTime(date: ISODate, time: TimeOfDay): string {
+  return `${date}T${time}:00`;
+}
+
 export function useCalendarEvents(): EventInput[] {
   const sessions = useSessionStore((state) => state.sessions);
   const bookings = useBookingStore((state) => state.bookings);
@@ -68,8 +78,8 @@ export function useCalendarEvents(): EventInput[] {
       events.push({
         id: session.id,
         title: classType.name,
-        start: buildISODateTime(session.date, session.startTime),
-        end: buildISODateTime(session.date, session.endTime),
+        start: wallClockDateTime(session.date, session.startTime),
+        end: wallClockDateTime(session.date, session.endTime),
         backgroundColor: color.background,
         borderColor: color.border,
         textColor: 'var(--color-ink)',

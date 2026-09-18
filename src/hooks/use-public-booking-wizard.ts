@@ -20,12 +20,26 @@ import { isPublicBookingClassId } from './use-public-booking-catalog';
 export type WizardStep = 1 | 2 | 3 | 4 | 5;
 
 // Objects, not bare ids: docs/06 section 3.15 "avoiding a second store read that could race a
-// subsequent mutation" - the success screen composes class/date/time from what was already
-// resolved on the way through steps 1-3, rather than looking the ids back up afterwards.
+// subsequent mutation" - steps 1-3 resolve class/date/time once and carry the objects forward
+// rather than looking the ids back up again later. This is the *in-progress* pick only, though:
+// it keeps changing as the visitor moves through the wizard (and, before mutation completes,
+// could in principle keep changing under a pending submit too), so it is never what the success
+// screen renders from - see ConfirmedSelection below.
 interface WizardSelection {
   classType: ClassType | null;
   date: ISODate | null;
   session: SessionWithOccupancy | null;
+}
+
+// The frozen counterpart to WizardSelection: set once, together with confirmedBooking, from a
+// snapshot taken at the exact moment a submission that went on to succeed was sent (see
+// submitCustomerDetails). The success screen (step 5) renders from this pair and only this
+// pair, never from live `selection` - which can still change after that moment (the visitor
+// navigating back and picking a different session) without the two ever drifting apart, since
+// they always change together or not at all.
+interface ConfirmedSelection {
+  classType: ClassType;
+  session: SessionWithOccupancy;
 }
 
 export interface UsePublicBookingWizardResult {
@@ -36,6 +50,7 @@ export interface UsePublicBookingWizardResult {
   submitError: string | null;
   isSessionFullError: boolean;
   confirmedBooking: Booking | null;
+  confirmedSelection: ConfirmedSelection | null;
   selectClass: (classType: ClassType) => void;
   selectDate: (date: ISODate) => void;
   selectSession: (session: SessionWithOccupancy) => void;
@@ -79,12 +94,16 @@ export function usePublicBookingWizard(initialClassId: string | null): UsePublic
   // session_full rejection" from that stale snapshot's occupancyState would silently miss it.
   const [isSessionFullError, setIsSessionFullError] = useState(false);
   const [confirmedBooking, setConfirmedBooking] = useState<Booking | null>(null);
+  const [confirmedSelection, setConfirmedSelection] = useState<ConfirmedSelection | null>(null);
   const [didInitPreselect, setDidInitPreselect] = useState(false);
 
   // Render-independent guard: a rapid double-click can fire two click handlers before React
   // commits the `disabled` attribute from the first one's state update, so the lock has to be
   // synchronous and outside render (docs/08 section 8.2 covers the store-level guarantee this
-  // backs up, not replaces).
+  // backs up, not replaces). Also doubles as the "selection is locked while a submission is in
+  // flight" guard below: every callback that would change `selection` or step away from it
+  // bails out while this is true, so a change started mid-submit can never land after the
+  // submit resolves and disagree with what was actually sent.
   const isSubmittingRef = useRef(false);
 
   const form = useForm<PublicBookingInputSchema>({
@@ -143,6 +162,7 @@ export function usePublicBookingWizard(initialClassId: string | null): UsePublic
 
   const selectClass = useCallback(
     (classType: ClassType) => {
+      if (isSubmittingRef.current) return; // selection is locked while a submission is in flight
       setSelection({ classType, date: null, session: null });
       setSubmitError(null);
       setIsSessionFullError(false);
@@ -153,6 +173,7 @@ export function usePublicBookingWizard(initialClassId: string | null): UsePublic
 
   const selectDate = useCallback(
     (date: ISODate) => {
+      if (isSubmittingRef.current) return;
       setSelection((prev) => ({ ...prev, date, session: null }));
       setSubmitError(null);
       setIsSessionFullError(false);
@@ -163,6 +184,7 @@ export function usePublicBookingWizard(initialClassId: string | null): UsePublic
 
   const selectSession = useCallback(
     (session: SessionWithOccupancy) => {
+      if (isSubmittingRef.current) return;
       setSelection((prev) => ({ ...prev, session }));
       setSubmitError(null);
       setIsSessionFullError(false);
@@ -172,12 +194,14 @@ export function usePublicBookingWizard(initialClassId: string | null): UsePublic
   );
 
   const goBack = useCallback(() => {
+    if (isSubmittingRef.current) return;
     goToStep(Math.max(1, step - 1) as WizardStep);
   }, [goToStep, step]);
 
   // Distinct from goBack: also drops the now-rejected session so a stale full slot can't be
   // resubmitted unchanged, and so a hand-edited URL can't skip back past step 3 for it either.
   const chooseAnotherTime = useCallback(() => {
+    if (isSubmittingRef.current) return;
     setSelection((prev) => ({ ...prev, session: null }));
     setSubmitError(null);
     setIsSessionFullError(false);
@@ -189,6 +213,7 @@ export function usePublicBookingWizard(initialClassId: string | null): UsePublic
     setSubmitError(null);
     setIsSessionFullError(false);
     setConfirmedBooking(null);
+    setConfirmedSelection(null);
     form.reset(EMPTY_FORM_VALUES);
     goToStep(1);
   }, [goToStep, form]);
@@ -196,13 +221,26 @@ export function usePublicBookingWizard(initialClassId: string | null): UsePublic
   const submitCustomerDetails = useCallback(
     async (values: PublicBookingInputSchema) => {
       if (isSubmittingRef.current) return;
+      // Snapshot synchronously, before the first await: this is the class/session that
+      // `values` (built from this same selection - see the sessionId sync effect above) is
+      // about to be submitted for. Reading `selection` again after the await would risk a
+      // stale-or-changed value if a later fix ever relaxes the lock below; reading it now never
+      // can, since nothing runs between this line and the read.
+      const { classType, session } = selection;
+      if (!classType || !session) return; // CustomerStep only mounts, and so can only submit, once both are set
       isSubmittingRef.current = true;
       setSubmitError(null);
       setIsSessionFullError(false);
       try {
         const result = await useBookingStore.getState().createPublicBooking(values);
         if (result.ok) {
+          // Set together, from the snapshot above, never from live `selection`: the confirmation
+          // must show exactly the session/class that was actually committed, even if the
+          // visitor's on-screen selection has since moved on (goBack/chooseAnotherTime/select*
+          // are locked for the duration of this call, but a step-5 revisit later must still
+          // show this booking, not whatever `selection` drifts to afterwards).
           setConfirmedBooking(result.booking);
+          setConfirmedSelection({ classType, session });
           goToStep(5);
         } else {
           setSubmitError(result.message);
@@ -212,7 +250,7 @@ export function usePublicBookingWizard(initialClassId: string | null): UsePublic
         isSubmittingRef.current = false;
       }
     },
-    [goToStep],
+    [goToStep, selection],
   );
 
   return {
@@ -223,6 +261,7 @@ export function usePublicBookingWizard(initialClassId: string | null): UsePublic
     submitError,
     isSessionFullError,
     confirmedBooking,
+    confirmedSelection,
     selectClass,
     selectDate,
     selectSession,

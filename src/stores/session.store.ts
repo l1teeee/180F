@@ -1,6 +1,7 @@
 // docs/08-STATE-MANAGEMENT.md section 1.
 import { create } from 'zustand';
 import type { ClassSession } from '@/domain/types';
+import { scheduleSnapshotWrite } from './demo-persistence';
 
 interface SessionState {
   sessions: ClassSession[];
@@ -13,8 +14,10 @@ export const useSessionStore = create<SessionState>()((set) => ({
 
   setSessions: (sessions) => set({ sessions }),
 
-  updateSession: (sessionId, changes) =>
+  updateSession: (sessionId, changes) => {
     set((state) => ({
       sessions: state.sessions.map((session) => (session.id === sessionId ? { ...session, ...changes } : session)),
-    })),
+    }));
+    scheduleSnapshotWrite();
+  },
 }));

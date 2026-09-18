@@ -9,17 +9,23 @@ import { Card } from "@/components/ui/card"
 import { cn } from "@/lib/cn"
 import type { Booking, ClassType, SessionWithOccupancy } from "@/domain/types"
 import { formatDisplayDate, formatDisplayTime } from "@/lib/dates"
-import { escapeIcsText, foldIcsLine } from "@/lib/ics"
+import { escapeIcsText, foldIcsLine, formatIcsUtcTimestamp } from "@/lib/ics"
 import { useSettingsStore } from "@/stores/settings.store"
 
-// Minimal floating-time .ics (no VTIMEZONE block) - a calendar app imports and shows it at the
-// given date/time in the viewer's own timezone. Good enough for a demo "Add to calendar"; a
-// real product would carry the studio's timezone (Organization.timezone) through explicitly.
+// RFC 5545 section 3.2.19: DTSTART/DTEND carry the studio's own IANA zone (Settings ->
+// general.timezone) via TZID rather than a bare local time (which a calendar app would import
+// in the *viewer's* zone instead - wrong for anyone not in Bogota) or a UTC "Z" time (which
+// would shift the wall-clock hour shown). No VTIMEZONE block is embedded: every mainstream
+// calendar client (Google/Outlook/Apple) resolves a TZID against its own copy of the IANA tz
+// database whenever the identifier matches a known Olson name, which every studio timezone in
+// this app always is (docs/04-DOMAIN-MODEL.md), so hand-authoring one here would only
+// duplicate that database's DST rules for no interoperability gain in a frontend-only demo.
 function buildCalendarFileUrl(
   booking: Booking,
   classType: ClassType,
   session: SessionWithOccupancy,
   address: string | undefined,
+  timezone: string,
 ): string {
   const start = `${session.date.replaceAll("-", "")}T${session.startTime.replace(":", "")}00`
   const end = `${session.date.replaceAll("-", "")}T${session.endTime.replace(":", "")}00`
@@ -29,8 +35,9 @@ function buildCalendarFileUrl(
     "PRODID:-//180 Fitness Studio//Booking//EN",
     "BEGIN:VEVENT",
     `UID:${booking.id}@180fitness.demo`,
-    `DTSTART:${start}`,
-    `DTEND:${end}`,
+    `DTSTAMP:${formatIcsUtcTimestamp(booking.createdAt)}`,
+    `DTSTART;TZID=${timezone}:${start}`,
+    `DTEND;TZID=${timezone}:${end}`,
     `SUMMARY:${escapeIcsText(`${classType.name} at 180 Fitness Studio`)}`,
     address ? `LOCATION:${escapeIcsText(address)}` : null,
     "END:VEVENT",
@@ -57,6 +64,7 @@ export function BookingSuccess({
   onBookAnother: () => void
 }) {
   const address = useSettingsStore((state) => state.settings?.general.address)
+  const timezone = useSettingsStore((state) => state.settings?.general.timezone)
   const [entered, setEntered] = useState(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches)
   const [detailsOpen, setDetailsOpen] = useState(false)
 
@@ -73,7 +81,11 @@ export function BookingSuccess({
   }, [entered])
 
   function handleAddToCalendar() {
-    const url = buildCalendarFileUrl(booking, classType, session, address)
+    // Settings finish hydrating before this screen is reachable at all (createPublicBooking
+    // requires them - see requireSettings() in booking.store.ts), so this can't actually be
+    // undefined; the check just satisfies strict mode rather than masking a real gap.
+    if (!timezone) throw new Error("Add to calendar: studio timezone was not loaded.")
+    const url = buildCalendarFileUrl(booking, classType, session, address, timezone)
     const link = document.createElement("a")
     link.href = url
     link.download = `${classType.name.toLowerCase().replace(/\s+/g, "-")}-booking.ics`

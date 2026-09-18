@@ -32,6 +32,23 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   const [pending, setPending] = useState(false);
 
+  // Radix's own close-focus restore (@radix-ui/react-dialog's DialogContentModal) targets
+  // context.triggerRef, which only DialogTrigger ever sets - this dialog has no DialogTrigger
+  // (it is opened by the caller's own state, e.g. bookings/page.tsx's cancelTarget), so that ref
+  // is always null and focus fell through to document.body on every close. Capturing the real
+  // opener ourselves - as state, set during render (React's documented "adjusting state when a
+  // prop changes" pattern, same as data-table.tsx used to use for its own page reset) rather
+  // than a ref written mid-render or an effect - means it is captured before DialogContent's own
+  // autoFocus Cancel button (below) can steal document.activeElement first.
+  const [wasOpen, setWasOpen] = useState(open);
+  const [opener, setOpener] = useState<HTMLElement | null>(null);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open && typeof document !== 'undefined') {
+      setOpener(document.activeElement as HTMLElement | null);
+    }
+  }
+
   async function handleConfirm() {
     setPending(true);
     try {
@@ -51,6 +68,10 @@ export function ConfirmDialog({
         size="sm"
         onPointerDownOutside={(event) => {
           if (destructive || pending) event.preventDefault();
+        }}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          opener?.focus();
         }}
       >
         <DialogHeader>

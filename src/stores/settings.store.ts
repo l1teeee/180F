@@ -3,6 +3,7 @@
 // including the public booking confirmation, reads it rather than useCatalogStore.
 import { create } from 'zustand';
 import type { StudioSettings } from '@/domain/types';
+import { scheduleSnapshotWrite } from './demo-persistence';
 
 interface SettingsState {
   settings: StudioSettings | null;
@@ -15,11 +16,13 @@ export const useSettingsStore = create<SettingsState>()((set) => ({
 
   setSettings: (settings) => set({ settings }),
 
-  updateSection: (section, changes) =>
+  updateSection: (section, changes) => {
     set((state) => {
       if (!state.settings) return state;
       return {
         settings: { ...state.settings, [section]: { ...state.settings[section], ...changes } },
       };
-    }),
+    });
+    scheduleSnapshotWrite();
+  },
 }));

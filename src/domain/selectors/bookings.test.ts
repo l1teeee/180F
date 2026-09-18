@@ -1,7 +1,13 @@
 // docs/08-STATE-MANAGEMENT.md section 4 / docs/11-TEST-PLAN.md section 3.
 import { describe, expect, it } from 'vitest';
 import type { Booking, ClassSession, Customer } from '@/domain/types';
-import { filterBookings, indexBookingsByCustomer, indexBookingsBySession, selectRecentBookings } from './bookings';
+import {
+  filterBookings,
+  indexBookingsByCustomer,
+  indexBookingsBySession,
+  selectBookingCountsByDate,
+  selectRecentBookings,
+} from './bookings';
 
 const SESSIONS: ClassSession[] = [
   { id: 'ses-1', classTypeId: 'ct-a', instructorId: 'ins-01', date: '2026-09-17', startTime: '06:00', endTime: '06:50', capacity: 10, room: 'Studio A', status: 'scheduled' },
@@ -75,5 +81,15 @@ describe('selectRecentBookings', () => {
   it('returns the most recently created bookings first, limited to `limit`', () => {
     const result = selectRecentBookings(BOOKINGS, 2);
     expect(result.map((b) => b.id)).toEqual(['bkg-4', 'bkg-3']);
+  });
+});
+
+describe('selectBookingCountsByDate', () => {
+  it('counts only confirmed and pending bookings per session date (ADR-023)', () => {
+    const counts = selectBookingCountsByDate(BOOKINGS, SESSIONS);
+    // ses-1 / 2026-09-17: bkg-1 confirmed + bkg-2 pending
+    expect(counts.get('2026-09-17')).toBe(2);
+    // ses-2 / 2026-09-18: bkg-3 cancelled, bkg-4 waitlist - neither counts, so no entry at all
+    expect(counts.has('2026-09-18')).toBe(false);
   });
 });

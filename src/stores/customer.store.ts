@@ -12,6 +12,7 @@ import { create } from 'zustand';
 import type { Customer, ISODate, NewCustomerInput } from '@/domain/types';
 import { PUBLIC_DEFAULT_PLAN_ID } from '@/domain/constants';
 import { customerRepository } from '@/services/repositories';
+import { scheduleSnapshotWrite } from './demo-persistence';
 
 interface CustomerState {
   customers: Customer[];
@@ -47,8 +48,10 @@ export const useCustomerStore = create<CustomerState>()((set, get) => ({
     return customerRepository.create({ ...input, membershipId: input.membershipId ?? PUBLIC_DEFAULT_PLAN_ID }, joinedAt);
   },
 
-  commitCustomer: (customer) =>
+  commitCustomer: (customer) => {
     set((state) =>
       state.customers.some((existing) => existing.id === customer.id) ? state : { customers: [...state.customers, customer] },
-    ),
+    );
+    scheduleSnapshotWrite();
+  },
 }));

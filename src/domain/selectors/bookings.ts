@@ -70,20 +70,30 @@ export function selectRecentBookings(bookings: Booking[], limit = 6): Booking[] 
   return [...bookings].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, limit);
 }
 
-// Exactly 7 points ending on demoToday, chronological order, cancelled bookings excluded.
+// ADR-023: a booking counts toward a day when its session is on that day and its status is
+// confirmed or pending - the same rule that decides whether it occupies a spot (ADR-008).
+// Cancelled and waitlisted bookings never count. This is the one place that definition lives:
+// selectDashboardKpis's todayBookings/vs-yesterday delta (dashboard.ts) and
+// selectWeeklyBookingTrend below both read this map rather than each counting its own way.
+export function selectBookingCountsByDate(bookings: Booking[], sessions: ClassSession[]): Map<ISODate, number> {
+  const sessionById = new Map(sessions.map((session) => [session.id, session]));
+  const countByDate = new Map<ISODate, number>();
+  for (const booking of bookings) {
+    if (booking.status !== 'confirmed' && booking.status !== 'pending') continue;
+    const date = sessionById.get(booking.sessionId)?.date;
+    if (!date) continue;
+    countByDate.set(date, (countByDate.get(date) ?? 0) + 1);
+  }
+  return countByDate;
+}
+
+// Exactly 7 points ending on demoToday, chronological order.
 export function selectWeeklyBookingTrend(
   bookings: Booking[],
   sessions: ClassSession[],
   demoToday: ISODate,
 ): WeeklyBookingPoint[] {
-  const sessionById = new Map(sessions.map((session) => [session.id, session]));
-  const countByDate = new Map<string, number>();
-  for (const booking of bookings) {
-    if (booking.status === 'cancelled') continue;
-    const date = sessionById.get(booking.sessionId)?.date;
-    if (!date) continue;
-    countByDate.set(date, (countByDate.get(date) ?? 0) + 1);
-  }
+  const countByDate = selectBookingCountsByDate(bookings, sessions);
 
   return lastNISODates(demoToday, 7).map((date) => ({
     date,

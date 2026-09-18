@@ -4,6 +4,7 @@
 // inbound one (docs/08 section 8.5's three edges), not an outbound read of another store.
 import { create } from 'zustand';
 import type { Notification } from '@/domain/types';
+import { scheduleSnapshotWrite } from './demo-persistence';
 
 let liveNotificationCounter = 0;
 
@@ -24,17 +25,22 @@ export const useNotificationStore = create<NotificationState>()((set) => ({
     liveNotificationCounter += 1;
     const notification: Notification = { ...input, id: `ntf-live-${liveNotificationCounter}`, read: false };
     set((state) => ({ notifications: [notification, ...state.notifications] }));
+    scheduleSnapshotWrite();
   },
 
-  markRead: (notificationId) =>
+  markRead: (notificationId) => {
     set((state) => ({
       notifications: state.notifications.map((notification) =>
         notification.id === notificationId ? { ...notification, read: true } : notification,
       ),
-    })),
+    }));
+    scheduleSnapshotWrite();
+  },
 
-  markAllRead: () =>
+  markAllRead: () => {
     set((state) => ({
       notifications: state.notifications.map((notification) => ({ ...notification, read: true })),
-    })),
+    }));
+    scheduleSnapshotWrite();
+  },
 }));
