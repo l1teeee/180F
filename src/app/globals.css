@@ -177,6 +177,17 @@
   }
 
   /*
+   * Clicking a chart makes Recharts move DOM focus onto one of its own internal
+   * <g tabindex="-1"> layers, which spans the whole plot, and Chrome paints its default black
+   * focus ring around it - a hard rectangle over the chart. Pointer focus needs no ring, and the
+   * selector above deliberately skips tabindex="-1". Keyboard focus is untouched: the chart's
+   * real tab stop (its root <svg>, tabindex="0") still gets the purple ring through :focus-visible.
+   */
+  .recharts-wrapper :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  /*
    * Text-entry fields get the soft focus treatment instead (docs/03 section 5 "Inputs"), not the
    * hard outline above: a --color-purple border plus a 3px rgba(120,105,212,0.18) ring. Box-shadow
    * does follow border-radius (only an outline was ever needed to fix the earlier square-ring bug
