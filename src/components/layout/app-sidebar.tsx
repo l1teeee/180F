@@ -168,7 +168,12 @@ export function AppSidebar({ items }: AppSidebarProps) {
 
       {/* Collapse toggle - docs/03 section 14.2 point 2. Client request: moved off the top of the
           rail and onto the rail's right edge, straddling the seam at this cluster separator, so it
-          reads as a seam control rather than a floating chevron above the brand. */}
+          reads as a seam control rather than a floating chevron above the brand. Second client
+          request: it was nearly invisible - a white circle with a 1px --color-border outline
+          dissolves into the near-white content panel on its right half. It is now the same
+          purple-deep as the rail's primary action with a white chevron, ringed in the panel's own
+          --color-background so the ring cuts it cleanly out of the dark rail. Supersedes 14.2's
+          "--color-surface fill, 1 px --color-border, --shadow-card". */}
       <div className={cn('relative shrink-0', collapsed ? 'my-[clamp(12px,1.5vh,20px)]' : 'my-3')}>
         <div role="separator" className={cn('bg-shell-line', collapsed ? 'mx-auto h-px w-4' : 'mx-3 h-px')} />
         <button
@@ -176,7 +181,7 @@ export function AppSidebar({ items }: AppSidebarProps) {
           onClick={() => setSidebarCollapsed(!collapsed)}
           aria-expanded={!collapsed}
           aria-label={collapsed ? m.layout.expandSidebar : m.layout.collapseSidebar}
-          className="absolute top-1/2 right-0 z-40 flex h-7 w-7 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-pill border border-border bg-surface text-text-secondary shadow-card transition-colors duration-[var(--duration-fast)] ease-out before:absolute before:-inset-2 before:content-[''] hover:bg-surface-muted hover:text-ink"
+          className="absolute top-1/2 right-0 z-40 flex h-7 w-7 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-pill bg-purple-deep text-white shadow-raise ring-[3px] ring-background transition-colors duration-[var(--duration-fast)] ease-out before:absolute before:-inset-2 before:content-[''] hover:bg-purple"
         >
           {collapsed ? (
             <ChevronRight className="h-4 w-4" aria-hidden="true" />
