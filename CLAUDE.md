@@ -12,7 +12,7 @@ Architecture kernel: `/docs/02`, `/docs/03`, `/docs/04`, `/docs/08`, `/docs/10`,
 Read in this order: this file, `GYM_DEMO_MASTER_PLAN.md`, `/docs/10-IMPLEMENTATION-PLAN.md`, `/docs/13-DECISIONS.md`, `/docs/14-PROGRESS.md`.
 
 ## Current phase
-See `/docs/14-PROGRESS.md`. It is the recovery point after compaction, restart or agent switch.
+**Complete.** All twelve phases are done and pushed. See `/docs/14-PROGRESS.md` for the acceptance record and the verification evidence behind it.
 
 ## Stack (pinned — do not change without an ADR)
 Next.js 16.3.5 App Router, React 19.2.8, TypeScript ^5.9.3 strict, pnpm 11.5.1.

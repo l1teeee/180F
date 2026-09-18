@@ -52,7 +52,7 @@ The master plan assigns the final technical audit to Codex. Codex exhausted its 
 
 # Current phase
 
-**Phase 12 - Convergence.** All build phases are complete and committed. One fix round is running to close two lifecycle defects that the Codex final audit reproduced: customer identity reuse after a reload, and waitlist promotion checking capacity but not the remaining eligibility rules. Last updated 2026-09-18, about 09:00.
+**Complete.** All twelve phases are done, verified and pushed. The last two defects, found by the Codex final audit, are closed. No critical or high finding remains open, which is the condition master plan 66.15 sets for declaring completion. Last updated 2026-09-18, about 09:30.
 
 ## Phase status
 
@@ -68,7 +68,8 @@ The master plan assigns the final technical audit to Codex. Codex exhausted its 
 | Fix round 2 - persistence across tabs, one definition of today's bookings, calendar hour, public booking hardening | done | f9d35df |
 | 11 Polish | done | 32c0414 |
 | Final review panel, 25 findings, all closed | done | 5477287 |
-| Codex final audit and 12 Convergence | in progress | |
+| Codex final audit | done, two defects found and closed | 894d38a |
+| 12 Convergence | **complete** | 894d38a |
 
 ## Latest verification (after the final review fixes, run by Opus)
 
@@ -76,16 +77,20 @@ The master plan assigns the final technical audit to Codex. Codex exhausted its 
 |---|---|
 | `pnpm typecheck` | clean |
 | `pnpm lint` | zero problems |
-| `pnpm test` | 385 of 385 |
+| `pnpm test` | 412 of 412 |
 | `pnpm test:e2e` | 17 passed, 9 skipped by project guard, 0 failed |
 | `pnpm build` | passes, 18 routes |
 | `grep -rn "eslint-disable" src/ e2e/` | 0 |
 
 ## Next exact action
 
-1. Verify the lifecycle fix round: identity cannot be reused after a reload or across tabs, and promotion honours every eligibility rule. Run the full gate including e2e and the production build.
-2. Commit, push, and reconcile this file.
-3. Declare Phase 12 complete only if no critical or high finding remains open (master plan 66.15).
+None. The build is complete.
+
+If work resumes, the useful entry points are: `pnpm dev` then sign in at /login with admin@demo.com / demo1234; `/docs/15-DEMO-SCRIPT.md` to present it; `/docs/13-DECISIONS.md` for why anything is the way it is.
+
+## Caveat on the final audit
+
+The Codex audit reproduced and reported two defects, then exhausted its usage quota while checking the remaining persistence and display claims. Those claims are covered by the four Playwright persistence scenarios, which pass, but the Codex pass over them did not finish. If another audit is ever run, that is where to start.
 
 # Interruption on 2026-09-17, about 22:40
 
