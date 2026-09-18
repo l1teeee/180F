@@ -122,15 +122,18 @@ export function AppSidebar({ items }: AppSidebarProps) {
         </button>
       </div>
 
-      {/* Brand - docs/03 section 14.2 point 1 */}
-      <div className={cn('flex h-12 shrink-0 items-center gap-2.5 px-3', collapsed && 'justify-center px-0')}>
+      {/* Brand - docs/03 section 14.2 point 1. Collapsed: gap-0 and a forced w-0 on the label are
+          required, not cosmetic - the label stays mounted (opacity-0, see RailLabel) for the width
+          transition, and a naked flex-shrink would otherwise let it claim the row's free space,
+          leaving justify-center nothing to center the icon with (it lands flush left instead). */}
+      <div className={cn('flex h-12 shrink-0 items-center gap-2.5 px-3', collapsed && 'justify-center gap-0 px-0')}>
         <span
           aria-hidden="true"
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-chip bg-white text-xs font-bold text-purple-deep"
         >
           180
         </span>
-        <RailLabel collapsed={collapsed} className="text-[15px] font-bold text-white">
+        <RailLabel collapsed={collapsed} className={cn('text-[15px] font-bold text-white', collapsed && 'w-0')}>
           180 Fitness
         </RailLabel>
       </div>
