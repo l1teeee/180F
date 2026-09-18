@@ -15,7 +15,10 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
-    screenshot: 'on-first-retry',
+    // Playwright's `screenshot` option has no 'on-first-retry' mode (only `trace` does,
+    // above) — 'on-first-failure' is the closest match to the task brief's intent: a
+    // screenshot the first time a test fails, not on every retry attempt.
+    screenshot: 'on-first-failure',
   },
 
   projects: [

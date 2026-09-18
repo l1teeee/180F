@@ -383,3 +383,41 @@ Accessibility is completion criteria (master plan §49), and a theme bridge that
 
 ### Consequences
 `/docs/03-DESIGN-SYSTEM.md` sections 5, 9 and 10 carry the corrected values. Phase 2D applies them to `globals.css` and to the Phase 2A design-system preview page.
+
+---
+
+## ADR-021 — Blobatar for generated avatars, tinted from our own palette
+
+### Context
+Every person in the demo needed a visual identity: 148 customers, 6 instructors, the signed-in administrator, and the avatar groups on class and session cards. The privacy rule (master plan §9) forbids real people, and no licensed photography exists for this project, so the fallback was coloured initials. The client asked for Blobatar (`blobatar.dev`) instead, tinted with our own accents rather than the library's default colours.
+
+### Alternatives considered
+1. Coloured initials, as originally specified.
+2. A remote avatar service (Dicebear's hosted API, Gravatar, UI Avatars).
+3. Blobatar, generated in the browser and tinted from our tokens.
+
+### Chosen solution
+Option 3. `blobatar@2.7.0`, no dependencies, React peer `>=18`, generated entirely client-side from a seed string. Verified against the published package, not the marketing page.
+
+Option 2 was rejected outright: a demo shown live must not depend on a third-party host being reachable, and pulling avatars from an external endpoint sits badly beside a product whose whole automation story is explicitly simulated.
+
+### Colour mapping — avatars carry meaning, not decoration
+`BlobatarOptions.palette` accepts `bg`, `head` and `eye` as hex, so every avatar is tinted from `globals.css` tokens through one helper, `src/lib/avatar.ts`. No blobatar ever renders in the library's default colours.
+
+| Subject | Accent | Reason |
+|---|---|---|
+| Instructor | the accent of their primary class type | Instructor 01 teaches Functional Training, so they read purple wherever they appear |
+| Customer | deterministic from the customer id, cycling the five pastels | stable across the whole app, so the same person is the same colour on every screen |
+| Administrator | `purple` | the brand |
+| Class or session avatar group | each member keeps their own accent | the group reads as a team, not a swatch |
+
+Tint per accent: `bg` is the soft variant, `head` the accent, `eye` `--color-ink`.
+
+### Static by default, animated by exception
+With `animate` set, the component stops being a single `<img>` and becomes inline SVG at roughly a dozen DOM nodes per avatar. A customers table holding 148 rows makes that a real cost, so:
+
+- lists, tables and avatar groups render the static `<img>` form;
+- `animate="hover"` is allowed only on the top-bar profile avatar and on detail-page headers, where there is exactly one.
+
+### Consequences
+`blobatar` is added to the approved dependency list; it is the only addition since the stack was pinned in ADR-002. Avatars stay deterministic, so they are hydration-safe and identical on every machine. `Customer.avatar` and `Instructor.avatar` stay `string | null` in the domain: `null` now means "generate a blobatar from the seed" rather than "draw initials". The initials fallback remains for the case where the library fails to load, so no avatar slot is ever empty.

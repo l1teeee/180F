@@ -20,7 +20,7 @@ interface ConfirmDialogCardProps {
 // next to a "Cancel booking" button reads as two ways to do the same thing.
 function ConfirmDialogCard({ titleId, descriptionId, onClose, autoFocusSafeAction }: ConfirmDialogCardProps) {
   return (
-    <div className={overlayCardClassName(420)}>
+    <div className={overlayCardClassName("sm")}>
       <div className="flex flex-col gap-5 px-6 pt-6 pb-6">
         <OverlayHeader
           title="Cancel this booking?"

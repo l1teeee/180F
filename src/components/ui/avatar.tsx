@@ -2,6 +2,12 @@
 
 import * as React from "react"
 import { Avatar as AvatarPrimitive } from "radix-ui"
+import { blobatarUri } from "blobatar/uri"
+import { Blobatar as BlobatarSvg } from "blobatar/react"
+// Required for animate="hover" to actually animate - blobatar/react renders nothing without it
+// (blobatar README "Animation"). Imported once here since every blobatar in the app renders
+// through this file; package.json marks "*.css" as a side effect so bundlers keep it.
+import "blobatar/motion.css"
 
 import { cn } from "@/lib/cn"
 
@@ -84,4 +90,99 @@ function AvatarGroupCount({ className, ...props }: React.ComponentProps<"div">) 
   )
 }
 
-export { Avatar, AvatarImage, AvatarFallback, AvatarGroup, AvatarGroupCount }
+// docs/03 section 13 "Avatars", ADR-021. bg/head/eye hex - src/lib/avatar.ts is the only place
+// that constructs one of these; every blobatar-rendering component here just takes the result.
+export interface BlobatarPalette {
+  bg: string
+  head: string
+  eye: string
+}
+
+// Catches a render-time throw from the animated (inline SVG) path only - the static path below
+// calls blobatarUri() directly, a plain function a try/catch already covers. A component error
+// cannot be caught by wrapping its JSX in try/catch (the throw happens later, during React's own
+// render pass), which is what an error boundary is for.
+class BlobatarErrorBoundary extends React.Component<
+  { fallback: React.ReactNode; children: React.ReactNode },
+  { failed: boolean }
+> {
+  state: { failed: boolean } = { failed: false }
+  static getDerivedStateFromError() {
+    return { failed: true }
+  }
+  render() {
+    return this.state.failed ? this.props.fallback : this.props.children
+  }
+}
+
+export interface AvatarBlobatarProps {
+  /** Entity id, never a name - docs/03 section 13 "Seeds": renaming a person must not change their face. */
+  seed: string
+  palette: BlobatarPalette
+  size: 24 | 32 | 40 | 64
+  /** "" when the name is already written beside it (decorative); the person's name where this avatar stands alone. */
+  alt: string
+  /**
+   * Opt-in only, per call site - docs/03 section 13 "Motion": animating switches rendering to
+   * inline SVG at roughly a dozen DOM nodes, which a 148-row table cannot afford. Omit for the
+   * static <img> form everywhere else.
+   */
+  animate?: "hover"
+  /** Shown on generation failure, or (static only) an actual image load failure - docs/03 section 13 "Fallback": a slot is never empty. */
+  fallbackInitials: string
+  /** e.g. "bg-purple-xsoft" - the accent's soft token, per docs/03 section 13 "Fallback". */
+  fallbackClassName?: string
+}
+
+// The one component every blobatar in the app renders through (docs/03 section 13, ADR-021).
+function AvatarBlobatar({
+  seed,
+  palette,
+  size,
+  alt,
+  animate,
+  fallbackInitials,
+  fallbackClassName,
+}: AvatarBlobatarProps) {
+  const fallback = (
+    <AvatarFallback className={cn("text-ink", fallbackClassName)}>{fallbackInitials}</AvatarFallback>
+  )
+
+  if (animate) {
+    return (
+      <Avatar style={{ width: size, height: size }}>
+        <BlobatarErrorBoundary fallback={fallback}>
+          <BlobatarSvg
+            name={seed}
+            animate="hover"
+            size={size}
+            background="circle"
+            palette={palette}
+            title={alt || undefined}
+            role={alt ? "img" : undefined}
+            aria-hidden={alt ? undefined : true}
+            className="size-full rounded-pill"
+          />
+        </BlobatarErrorBoundary>
+      </Avatar>
+    )
+  }
+
+  // blobatarUri() is deterministic and should not throw for a well-formed seed; the try/catch
+  // exists specifically for docs/03 section 13 "Fallback" ("if the module fails to load").
+  let src: string | null
+  try {
+    src = blobatarUri(seed, { size, background: "circle", palette })
+  } catch {
+    src = null
+  }
+
+  return (
+    <Avatar style={{ width: size, height: size }}>
+      {src ? <AvatarImage src={src} alt={alt} /> : null}
+      {fallback}
+    </Avatar>
+  )
+}
+
+export { Avatar, AvatarImage, AvatarFallback, AvatarGroup, AvatarGroupCount, AvatarBlobatar }

@@ -7,9 +7,10 @@ import type { ClassType, Customer, Instructor, ClassSession, Booking, Membership
 export interface SessionWithOccupancy extends ClassSession {
   booked: number; // confirmed + pending (ADR-008)
   available: number;
-  occupancyRate: number; // 0..1
+  occupancyRate: number; // 0..1, clamped for display - see `overbooked` for the raw comparison
   occupancyState: OccupancyState;
   waitlistCount: number;
+  overbooked: boolean; // booked > capacity (e.g. capacity edited below the booking count)
 }
 
 export interface SessionCard extends SessionWithOccupancy {

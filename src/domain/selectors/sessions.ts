@@ -19,12 +19,18 @@ import { indexBookingsBySession } from './bookings';
 export function selectSessionOccupancy(session: ClassSession, bookingsForSession: Booking[]): SessionWithOccupancy {
   const booked = bookingsForSession.filter((b) => b.status === 'confirmed' || b.status === 'pending').length;
   const waitlistCount = bookingsForSession.filter((b) => b.status === 'waitlist').length;
+  const overbooked = booked > session.capacity;
   const available = Math.max(0, session.capacity - booked);
-  const occupancyRate = session.capacity > 0 ? booked / session.capacity : 0;
+  // Clamped to [0, 1] for display - a shrunk capacity (docs/master-plan 22's Edit class action)
+  // can put booked > capacity, and a bar/percentage must never read past 100%. `booked` above
+  // stays the raw ledger count and `overbooked` flags the discrepancy explicitly (ADR-008): the
+  // clamp only affects this rendered rate, never the truth it is computed from.
+  const occupancyRate =
+    session.capacity > 0 ? Math.min(1, booked / session.capacity) : booked > 0 ? 1 : 0;
   const occupancyState: OccupancyState =
     available <= 0 ? 'full' : occupancyRate >= ALMOST_FULL_OCCUPANCY_THRESHOLD ? 'almost_full' : 'available';
 
-  return { ...session, booked, available, occupancyRate, occupancyState, waitlistCount };
+  return { ...session, booked, available, occupancyRate, occupancyState, waitlistCount, overbooked };
 }
 
 export function toSessionCard(

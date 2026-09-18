@@ -70,7 +70,21 @@ Codex reproduced the specified PRNG, compiled the stylesheet in memory and measu
 
 Codex also confirmed the architecture is viable, that ADR-006/007 correctly remove duplicated counters, that no quadratic recomputation is inherent, and it flagged that useShallow cannot stabilise arrays of freshly built view models - now recorded in docs/08 section 8.8.
 
+# Client requests received mid-build
+
+- **Blobatar avatars** (ADR-021, docs/03 section 13). Generated in the browser, tinted from our tokens, accent carries meaning: instructors take their primary class type's accent, customers a deterministic one from their id.
+- **Collapsible sidebar** (docs/03 section 14). A 64 px rail of circular icon buttons with an ink primary action, tooltips for labels, and the collapsed state persisted per viewer.
+
+Both are queued to land before the six-agent feature wave, so every screen is built against them rather than retrofitted.
+
 # Known issues
+
+## Carried forward, to be fixed before Phase 12
+
+- `src/components/ui/select.tsx`: the Radix `SelectTrigger` renders a button with an unconditional `outline-none` and only shows a purple border on its own open state, so a keyboard user tabbing to it sees nothing. Currently unused anywhere, therefore inert - but it must be fixed before any screen wires a select in.
+- The `/design-system` page overflows horizontally at 390 px: the data-surfaces table carries `min-w-[560px]` and the static overlay specimens are fixed-pixel. It is an internal reference page, not part of the demo narrative, so this is polish-phase work.
+- Codex exhausted its usage quota at roughly 22:00 and resets at 23:32. Its executable probes against the foundation completed and are recorded above; the three screen reviews are deferred until the quota returns, or will be run as adversarial Claude reviews if the schedule demands it.
+- Five agents so far have acted on a message the harness relayed from the user mid-run, treating it as their instruction rather than context. One committed and pushed another agent's half-written files. Every brief now carries an override notice at its head and immediately before its final instruction.
 
 - No git commits exist. Commits and pushes require explicit user authorisation on each occasion, so `git worktree` isolation is unavailable; parallel agents are kept safe by disjoint path ownership instead (`/docs/12-AGENT-OWNERSHIP.md`).
 - `pnpm test` fails until Phase 2B creates `vitest.config.ts` and the first tests. Expected, not a defect.

@@ -31,22 +31,23 @@ type AuthWorkerFixtures = {
 
 export const test = hydrationTest.extend<AuthFixtures, AuthWorkerFixtures>({
   // Worker-scoped: one real login per worker process, not one per test file.
+  // `provide` not `use`: see the matching comment in fixtures/hydration.ts.
   adminStorageStatePath: [
-    async ({ browser }, use) => {
+    async ({ browser }, provide) => {
       const context = await browser.newContext();
       const page = withHydrationAwareGoto(await context.newPage());
       await signIn(page);
       await context.storageState({ path: STORAGE_STATE_PATH });
       await context.close();
-      await use(STORAGE_STATE_PATH);
+      await provide(STORAGE_STATE_PATH);
     },
     { scope: 'worker' },
   ],
 
-  authenticatedPage: async ({ browser, adminStorageStatePath }, use) => {
+  authenticatedPage: async ({ browser, adminStorageStatePath }, provide) => {
     const context = await browser.newContext({ storageState: adminStorageStatePath });
     const page = withHydrationAwareGoto(await context.newPage());
-    await use(page);
+    await provide(page);
     await context.close();
   },
 });

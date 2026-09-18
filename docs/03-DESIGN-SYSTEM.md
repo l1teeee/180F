@@ -251,7 +251,7 @@ After installation every primitive is restyled: radii to the scale in §3, shado
 - Body text ≥ 4.5:1 on its surface. `--color-text-secondary` (#737373, 4.6:1 on white) passes and is the floor for any text that carries meaning. `--color-text-tertiary` (#A3A3A3, 2.5:1) is **decorative or disabled-state only** — never table headers, never labels, never any text a reader must read.
 - Text on a pastel or gradient surface is `--color-ink`, not white. White on the lavender tile measures 1.7:1 to 2.5:1. White text is used only on `--color-ink` surfaces and on the `--color-purple-deep` button fill.
 - Pastel fills are backgrounds only — text on them uses the darker paired token from §5.
-- Focus is always visible, and it is an `outline`, not a `box-shadow` — see section 12.6. A box-shadow ring does not follow `border-radius`, which is why an early build drew a square ring around a rounded search input.
+- Focus is always visible. Controls (buttons, links, tabs) take an `outline`; text-entry fields take the border-plus-halo treatment in section 5. See section 12.6 for both and for why an early build drew a square ring around a rounded input.
 - Charts carry a text summary and a data table alternative where the chart is the only source of a number.
 - Hit targets ≥ 40 px; icon-only buttons carry `aria-label`.
 
@@ -418,8 +418,150 @@ The focus ring is an `outline`, never a `box-shadow`: an outline follows `border
 
 Rules that follow:
 
-- `:focus-visible` only. A mouse click on an input must not paint a ring; keyboard navigation must.
+- `:focus-visible` only. A mouse click on a button or a card must not paint a ring; keyboard navigation must.
+- **Text-entry fields are the exception, by platform design.** Browsers always match `:focus-visible` on `input`, `textarea` and `select`, whatever the input modality, because signalling "you can type here" is considered essential. Do not fight this with JavaScript. Instead, give fields the softer treatment from section 5 so the state that shows most often is the designed one:
+
+```css
+@layer base {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="reset"]):focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: none;
+    border-color: var(--color-purple);
+    box-shadow: 0 0 0 3px rgba(120, 105, 212, 0.18);
+  }
+}
+```
+
+`box-shadow` does follow `border-radius`. The square ring in the early build came from the rule landing on an unrounded wrapper, not from box-shadow itself. A field that deliberately shows no ring — the command palette's search row, whose container carries the focus state — opts out explicitly and is the only such case.
 - Never `outline: none` without this replacement.
 - A container, card, section or wrapper `div` never shows a ring. If one does, it carries a `tabindex` it should not have.
 - The ring does not transition. It appears on the frame the element is focused.
 - A specimen that illustrates the focused state in the design system uses a static class, never the live pseudo-class, and is marked as a specimen.
+
+---
+
+## 13. Avatars
+
+Generated with `blobatar` (ADR-021), in the browser, deterministic from a seed string. Never a photograph, never a remote request.
+
+### Seeds
+| Subject | Seed |
+|---|---|
+| Customer | the customer id, for example `cus-0042` |
+| Instructor | the instructor id, for example `ins-03` |
+| Administrator | `admin@demo.com` |
+
+Ids rather than names, so a rename never changes a face.
+
+### Tint
+One helper, `src/lib/avatar.ts`, maps a subject to an accent and returns the `palette` object. Nothing else constructs a blobatar palette.
+
+```
+bg   -> the accent's soft token   (purple-soft, yellow-soft, green-soft, pink-soft, blue-soft)
+head -> the accent token          (purple, yellow, green, pink, blue)
+eye  -> --color-ink
+```
+
+Instructors take the accent of their primary class type. Customers take a deterministic accent from their id. The administrator is purple.
+
+### Sizes and shape
+`background: "circle"`, matching every other avatar surface in the system. 32 px in tables and lists, 40 px in the top bar and cards, 64 px on detail headers, 24 px inside an `AvatarGroup`.
+
+### Motion
+Static `<img>` by default. `animate="hover"` only where a single avatar appears — the top-bar profile and detail-page headers — because animating switches the component to inline SVG at roughly a dozen nodes each, which a 148-row table cannot afford. Under `prefers-reduced-motion: reduce`, no avatar animates.
+
+### Fallback
+If the module fails to load, the slot renders initials on the same accent's soft token. An avatar slot is never empty and never shifts layout.
+
+### Accessibility
+An avatar is decorative wherever the name is already written beside it, and takes `alt=""`. Where it stands alone, as in an `AvatarGroup`, it takes the person's name as its accessible name, and the group exposes the overflow count as text rather than only as a `+N` chip.
+
+---
+
+## 14. Sidebar: expanded and collapsed
+
+The sidebar has two desktop states. Below `lg` neither applies: it stays the drawer described in section 8, and the collapse control is not rendered.
+
+### 14.1 The two states
+
+| | Expanded | Collapsed |
+|---|---|---|
+| Width | 240 px | 64 px |
+| Items | 44 px tall, icon plus label, `--radius-field` | 40 px circular buttons, centred, icon only |
+| Active | `--color-purple-xsoft` background, ink text, 3 px purple left rail | `--color-purple-xsoft` filled circle, ink icon, no rail |
+| Hover | `--color-surface-muted` | `--color-surface-muted` circle |
+| Labels | visible | delivered by tooltip, 300 ms delay, anchored right at 8 px |
+| Section separators | 1 px `--color-border` with a small caps label | 1 px `--color-border`, 16 px wide, centred, no label |
+
+The collapsed rail is a column of circles on `--color-surface`, not a squeezed copy of the expanded list. Vertical rhythm is 12 px between items and 20 px between clusters.
+
+### 14.2 Anatomy, top to bottom
+
+1. **Brand.** Expanded: the logo mark plus "180 Fitness". Collapsed: the mark alone, 32 px, centred.
+2. **Collapse toggle.** A 28 px circular ghost button, `ChevronLeft` when expanded and `ChevronRight` when collapsed, sitting at the top of the rail. It carries `aria-expanded` and an `aria-label` that reads "Collapse sidebar" or "Expand sidebar".
+3. **Primary action.** A 44 px circle filled `--color-ink` with a white `Plus`, opening the new booking dialog. This is the one strong accent in the rail and the direct equivalent of the expanded sidebar's hero CTA — it is the reference's black circle, carrying our meaning rather than its own.
+4. **Primary navigation.** Dashboard, Calendar, Bookings, Customers, Classes, Instructors, Memberships — the list from master plan §15, with its existing Lucide icons. The icons do not change between states.
+5. **Separator.**
+6. **Secondary navigation.** Automations, Settings.
+7. **Bottom cluster,** pinned to the bottom edge with `margin-top: auto`: the notifications count when the top bar is out of view on short viewports, then the profile avatar — a 32 px Blobatar per section 13, which opens the same profile menu as the top bar.
+
+### 14.3 Motion
+
+Width transitions over `--duration-deliberate` on `--ease-out`. Labels fade out over `--duration-fast` **before** the width animates, and fade in **after** it settles, so no text is ever squeezed mid-transition. The main content area follows the width change through the same transition rather than snapping. Icons never move horizontally within their own row: only the container width changes. Under `prefers-reduced-motion: reduce` the state change is instant.
+
+### 14.4 State and persistence
+
+Collapsed state lives in `useUiStore.sidebarCollapsed` and is persisted to `localStorage` under `180f.ui.sidebar`. This is a per-viewer interface preference, not demo data, so it is the one thing besides the auth session that survives a reload — a presenter who collapses the rail should not have to do it again after refreshing.
+
+### 14.5 Accessibility
+
+The rail is still a `nav` with the same accessible structure; only the visual presentation changes. Every collapsed item keeps its accessible name through the tooltip's `aria-describedby` or an `aria-label`, never through the icon alone. Tooltips are keyboard reachable, so a Tab through the collapsed rail announces each destination. Focus order does not change between states, and collapsing never moves focus.
+
+---
+
+## 15. The application frame
+
+The admin application does not sit flush against the browser edges. It floats: a light content panel with large rounded corners, suspended on a deep coloured frame, with the icon rail living on that frame rather than inside the panel.
+
+### 15.1 Frame colour - deliberately not black
+
+```css
+@theme {
+  --color-shell:       #2B2542;  /* the frame. deep aubergine, low chroma */
+  --color-shell-soft:  #3A3358;  /* rail hover */
+  --color-shell-line:  #453D66;  /* rail separators */
+}
+```
+
+Black was rejected. A black frame around a pastel lavender product reads as two unrelated designs stapled together, and it drags the whole page toward the "heavy black backgrounds" master plan §12 explicitly forbids. `--color-shell` is a deep aubergine carrying the same purple family as the brand, at low chroma so it recedes behind the content instead of competing with it. White on it measures about 13:1, far above the floor.
+
+### 15.2 Geometry
+
+| Element | Treatment |
+|---|---|
+| Page background | `--color-shell`, full bleed |
+| Content panel | `--color-background`, `border-radius: 28px`, inset 12 px from the top, right and bottom edges |
+| Panel shadow | `0 18px 50px rgba(20,16,38,0.28)` - the panel must read as lifted off the frame |
+| Rail | transparent, sitting directly on the frame, 64 px collapsed and 240 px expanded |
+| Top bar | **inside** the content panel, not on the frame, so search and actions belong to the content |
+
+The rail is the only thing on the frame besides the brand mark and the profile avatar. That is what makes the panel read as a document and the rail as chrome.
+
+### 15.3 Rail on the frame
+
+- Idle icon: `rgba(255,255,255,0.72)`. Hover: full white on a `--color-shell-soft` circle.
+- **Active: a white filled circle with a `--color-purple-deep` icon.** Highest contrast point in the rail, and it keeps the brand colour present on the dark frame.
+- Primary action: the `--color-ink` circle from section 14 becomes a `--color-purple-deep` circle here, because ink on aubergine is nearly invisible. Same role, same size, readable ground.
+- Separators: 16 px wide, 1 px `--color-shell-line`, centred.
+- Brand mark at the top and profile avatar at the bottom both sit on the frame as circles.
+
+### 15.4 Responsive
+
+The frame is a desktop affordance. Below `md` it collapses entirely: the content panel goes full bleed with no inset, no radius and no shadow, and the rail returns to the drawer from section 8. A 12 px dark border around a phone screen wastes the only space that matters.
+
+At `md` to `lg` the inset drops to 8 px and the radius to 20 px.
+
+### 15.5 Why this shape
+
+Three things it buys, beyond looking current: the rounded panel gives every screen a consistent boundary so page-level scroll never runs into the viewport edge; the frame gives the rail somewhere to live that is visibly not part of the content; and the inset creates a natural resting place for the demo-mode badge and any future global status without crowding the page header.

@@ -42,7 +42,7 @@ function MessagePreviewCard({ titleId, descriptionId, onClose }: MessagePreviewC
   }
 
   return (
-    <div className={overlayCardClassName(680)}>
+    <div className={overlayCardClassName("lg")}>
       <div className="flex-none px-6 pt-6 pb-1">
         <OverlayHeader
           title="Message preview"

@@ -77,6 +77,7 @@ describe('selectSessionOccupancy', () => {
     const result = selectSessionOccupancy(session, bookings);
     expect(result.occupancyRate).toBeCloseTo(0.85, 10);
     expect(result.occupancyState).toBe('almost_full');
+    expect(result.overbooked).toBe(false);
   });
 
   it('is available one booking below the 0.85 boundary', () => {
@@ -86,6 +87,42 @@ describe('selectSessionOccupancy', () => {
     ); // 16 / 20 = 0.80
     const result = selectSessionOccupancy(session, bookings);
     expect(result.occupancyState).toBe('available');
+    expect(result.overbooked).toBe(false);
+  });
+
+  it('clamps occupancyRate to 1 and flags overbooked when capacity is shrunk below the booking count', () => {
+    // Reproduces the Edit-class-action path (master plan 22): a session that had 2 confirmed
+    // bookings has its capacity edited down to 1.
+    const session = makeSession({ capacity: 1 });
+    const bookings = [
+      makeBooking({ id: 'b1', customerId: 'cus-0001', status: 'confirmed' }),
+      makeBooking({ id: 'b2', customerId: 'cus-0002', status: 'confirmed' }),
+    ];
+    const result = selectSessionOccupancy(session, bookings);
+    expect(result.booked).toBe(2); // the ledger stays raw - never hidden or clamped
+    expect(result.available).toBe(0);
+    expect(result.occupancyRate).toBe(1); // clamped for display, never > 1 (was 2 pre-fix)
+    expect(result.occupancyState).toBe('full');
+    expect(result.overbooked).toBe(true);
+  });
+
+  it('handles zero capacity: not overbooked with no bookings, overbooked once any exist', () => {
+    const emptySession = makeSession({ capacity: 0 });
+    const empty = selectSessionOccupancy(emptySession, []);
+    expect(empty.booked).toBe(0);
+    expect(empty.available).toBe(0);
+    expect(empty.occupancyRate).toBe(0);
+    expect(empty.occupancyState).toBe('full'); // 0 available spots, trivially full
+    expect(empty.overbooked).toBe(false);
+
+    const bookedSession = makeSession({ capacity: 0 });
+    const bookings = [makeBooking({ id: 'b1', customerId: 'cus-0001', status: 'confirmed' })];
+    const result = selectSessionOccupancy(bookedSession, bookings);
+    expect(result.booked).toBe(1);
+    expect(result.available).toBe(0);
+    expect(result.occupancyRate).toBe(1); // clamped, division by zero avoided
+    expect(result.occupancyState).toBe('full');
+    expect(result.overbooked).toBe(true);
   });
 });
 

@@ -57,8 +57,13 @@ export function withHydrationAwareGoto(page: Page): Page {
 }
 
 export const test = base.extend<object>({
-  page: async ({ page }, use) => {
-    await use(withHydrationAwareGoto(page));
+  // Named `provide`, not Playwright's usual `use`: eslint-plugin-react-hooks (from
+  // eslint-config-next) matches any call to an identifier named `use*` as a React Hook call
+  // and flags it outside a component/hook. This is Playwright's fixture-provider callback,
+  // unrelated to React — renaming sidesteps the false positive without touching eslint config
+  // (out of this harness's write set) or disabling the rule.
+  page: async ({ page }, provide) => {
+    await provide(withHydrationAwareGoto(page));
   },
 });
 

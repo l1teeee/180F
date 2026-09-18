@@ -16,8 +16,24 @@ export const FIELD_LABEL_CLASSNAME = "text-xs font-semibold text-text-secondary"
 // a native <dialog> that is deliberately left at its UA-default width: fit-content (so it centres
 // itself), and a percentage width inside a fit-content ancestor is the classic CSS sizing
 // ambiguity - min() gives every browser one definite number to resolve instead.
-export function overlayCardClassName(widthPx: number): string {
-  return `flex max-h-[85vh] w-[min(${widthPx}px,calc(100vw-2rem))] flex-col overflow-hidden rounded-card border border-border bg-surface shadow-modal`;
+//
+// Every entry below is a complete, literal class string (docs/03 11.2 size scale) - Tailwind only
+// emits a utility it can find verbatim in source, so splicing a number into a `w-[min(...)]`
+// token at runtime (the previous implementation) produced a class Tailwind never generates: the
+// rule silently does not exist in the stylesheet and the dialog falls back to the browser's
+// `dialog:modal` UA max-width instead of its documented size.
+export type OverlayCardSize = "sm" | "md" | "lg" | "palette" | "sheet";
+
+const OVERLAY_CARD_CLASSNAME: Record<OverlayCardSize, string> = {
+  sm: "flex max-h-[85vh] w-[min(420px,calc(100vw-2rem))] flex-col overflow-hidden rounded-card border border-border bg-surface shadow-modal",
+  md: "flex max-h-[85vh] w-[min(520px,calc(100vw-2rem))] flex-col overflow-hidden rounded-card border border-border bg-surface shadow-modal",
+  lg: "flex max-h-[85vh] w-[min(680px,calc(100vw-2rem))] flex-col overflow-hidden rounded-card border border-border bg-surface shadow-modal",
+  palette: "flex max-h-[85vh] w-[min(560px,calc(100vw-2rem))] flex-col overflow-hidden rounded-card border border-border bg-surface shadow-modal",
+  sheet: "flex max-h-[85vh] w-[min(420px,calc(100vw-2rem))] flex-col overflow-hidden rounded-card border border-border bg-surface shadow-modal",
+};
+
+export function overlayCardClassName(size: OverlayCardSize): string {
+  return OVERLAY_CARD_CLASSNAME[size];
 }
 
 interface OverlayHeaderProps {

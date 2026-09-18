@@ -160,6 +160,25 @@
     outline: 2px solid var(--color-purple);
     outline-offset: 2px;
   }
+
+  /*
+   * Text-entry fields get the soft focus treatment instead (docs/03 section 5 "Inputs"), not the
+   * hard outline above: a --color-purple border plus a 3px rgba(120,105,212,0.18) ring. Box-shadow
+   * does follow border-radius (only an outline was ever needed to fix the earlier square-ring bug
+   * on non-field controls), so the halo renders correctly rounded here. `input` is narrowed to
+   * text-entry types only - a checkbox/radio/button/submit/reset keeps the section 12.6 outline
+   * above, same as every other non-field control. This selector list (element selectors, not
+   * :where()) is deliberately more specific than the zero-specificity rule above so it wins.
+   */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not(
+      [type="reset"]
+    ):focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: none;
+    border-color: var(--color-purple);
+    box-shadow: 0 0 0 3px rgba(120, 105, 212, 0.18);
+  }
 }
 
 /* Hatch pattern (docs/03 section 2) — fill for non-highlighted weekly-chart bars. */
@@ -240,6 +259,23 @@
     .overlay-surface[open]::backdrop {
       opacity: 0;
     }
+  }
+
+  /*
+   * Chrome's own `dialog:modal` UA rule also sets `max-width`/`max-height: calc(100% - 6px -
+   * 2em)` (an author declaration always beats a UA one, so this is never about specificity) -
+   * harmless for the sm/md/lg dialogs, which cap themselves at 85vh on their inner card, but it
+   * silently shrinks these two variants below the geometry they explicitly ask for elsewhere:
+   * the side sheet's height (top-3/right-3/bottom-3 with no max-height of its own, so the UA
+   * cap left it ~38px short of the viewport and opened a bottom gap wider than the 12px right
+   * one) and the bottom sheet's width (w-full, capped ~38px short of true full-bleed). Unrelated
+   * to margin/reduced-motion, so declared once, unconditionally, ungated by prefers-reduced-motion.
+   */
+  .overlay-surface--right {
+    max-height: none;
+  }
+  .overlay-surface--bottom {
+    max-width: none;
   }
 
   @media (prefers-reduced-motion: no-preference) {

@@ -33,7 +33,7 @@ function BookingDialogFields({ titleId, descriptionId, onClose, occupied, capaci
   const idPrefix = useId();
 
   return (
-    <div className={overlayCardClassName(520)}>
+    <div className={overlayCardClassName("md")}>
       <div className="flex-none px-6 pt-6 pb-1">
         <OverlayHeader
           title="New booking"

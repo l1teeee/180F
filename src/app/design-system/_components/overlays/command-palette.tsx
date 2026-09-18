@@ -65,7 +65,7 @@ function CommandPaletteCard({ titleId, onClose }: CommandPaletteCardProps) {
   }
 
   return (
-    <div className={overlayCardClassName(560)}>
+    <div className={overlayCardClassName("palette")}>
       {/* The palette has no visible title bar (docs/03 11.4-E shows just the search row), so the
           accessible name is visually hidden rather than absent. */}
       <h3 id={titleId} className="sr-only">
@@ -75,7 +75,10 @@ function CommandPaletteCard({ titleId, onClose }: CommandPaletteCardProps) {
         <div className="flex items-center gap-3">
           <Search aria-hidden="true" className="h-[18px] w-[18px] shrink-0 text-text-tertiary" />
           {/* No border/focus ring on the input itself - the container carries the focus state
-              (docs/03 11.4-E), which is what the always-visible modal chrome already provides. */}
+              (docs/03 11.4-E), which is what the always-visible modal chrome already provides.
+              focus-visible:shadow-none opts this one field out of the global text-field halo
+              (globals.css section 5 rule): this input has no border-radius of its own, so that
+              halo would render as the hard-edged square ring section 12.6 exists to prevent. */}
           <input
             id={inputId}
             type="text"
@@ -88,7 +91,7 @@ function CommandPaletteCard({ titleId, onClose }: CommandPaletteCardProps) {
             autoComplete="off"
             placeholder="Search customers, classes..."
             onKeyDown={handleKeyDown}
-            className="h-8 flex-1 border-0 bg-transparent text-sm text-ink placeholder:text-text-tertiary focus:outline-none"
+            className="h-8 flex-1 border-0 bg-transparent text-sm text-ink placeholder:text-text-tertiary focus:outline-none focus-visible:shadow-none"
           />
         </div>
       </div>

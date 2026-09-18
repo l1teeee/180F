@@ -3,7 +3,7 @@
 // invariant and narrative outcome runs for all seven weekday anchors - a single-anchor test is
 // not acceptable (Codex H1): the unpatched statistical pass reproduced 3, 3, 2, 3 full sessions
 // in the next 3 days for Thursday through Sunday against the original spec.
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import type { BookingSource, BookingStatus, DemoDataset, ISODate } from '@/domain/types';
 import { addDaysISO, buildISODateTime, isWeekendISO } from '@/lib/dates';
 import { buildDemoDataset } from './seed';
@@ -251,5 +251,56 @@ describe('buildDemoDataset determinism', () => {
     const a = buildDemoDataset('2026-09-17');
     const b = buildDemoDataset('2026-09-17');
     expect(JSON.stringify(a)).toBe(JSON.stringify(b));
+  });
+});
+
+// The reviewer probe that motivated this suite ran buildDemoDataset under TZ=Pacific/Apia and
+// got a different session count than under the machine's own timezone (Finding 2). The contract
+// is dataset deep-equality across timezones for the same demoToday - not any particular session
+// count - so that is what this asserts, across five zones chosen to cover the cases that break a
+// naive local-time-crossing implementation: the trivial baseline (UTC), a negative fixed offset
+// where a UTC-parsed date reads back as the PREVIOUS local day (America/Bogota, UTC-5), two large
+// positive fixed offsets where a local-to-UTC conversion reads back a day early (Pacific/Apia
+// UTC+13 and Pacific/Kiritimati UTC+14, the most extreme in either direction), and a
+// non-hour-aligned offset (Asia/Kolkata, UTC+5:30).
+describe('buildDemoDataset timezone independence (Finding 2)', () => {
+  const ORIGINAL_TZ = process.env.TZ;
+
+  afterEach(() => {
+    if (ORIGINAL_TZ === undefined) {
+      delete process.env.TZ;
+    } else {
+      process.env.TZ = ORIGINAL_TZ;
+    }
+  });
+
+  const TIMEZONES = ['UTC', 'America/Bogota', 'Pacific/Apia', 'Pacific/Kiritimati', 'Asia/Kolkata'];
+
+  it('is byte-identical across all five timezones for demoToday=2026-09-17', () => {
+    const demoToday = '2026-09-17';
+    const results = TIMEZONES.map((tz) => {
+      process.env.TZ = tz;
+      return { tz, json: JSON.stringify(buildDemoDataset(demoToday)) };
+    });
+
+    for (const result of results.slice(1)) {
+      expect(result.json, `TZ=${result.tz} dataset differs from TZ=${results[0].tz}`).toBe(results[0].json);
+    }
+  });
+
+  it('is byte-identical across all five timezones for every weekday anchor', () => {
+    for (const demoToday of WEEKDAY_ANCHORS) {
+      const results = TIMEZONES.map((tz) => {
+        process.env.TZ = tz;
+        return { tz, json: JSON.stringify(buildDemoDataset(demoToday)) };
+      });
+
+      for (const result of results.slice(1)) {
+        expect(
+          result.json,
+          `demoToday=${demoToday}: TZ=${result.tz} dataset differs from TZ=${results[0].tz}`,
+        ).toBe(results[0].json);
+      }
+    }
   });
 });

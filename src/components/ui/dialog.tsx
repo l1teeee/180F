@@ -44,23 +44,28 @@ function DialogOverlay({
   )
 }
 
-const DIALOG_SIZE_WIDTH: Record<"sm" | "md" | "lg", string> = {
+const DIALOG_SIZE_WIDTH: Record<"sm" | "md" | "lg" | "palette", string> = {
   sm: "420px",
   md: "520px",
   lg: "680px",
+  palette: "560px",
 }
 
 // section 11.2 "Container" + 11.5: 24px radius, 1px border, --shadow-modal, 24px padding,
 // max-height 85vh with a scrolling body. Enter is 200ms opacity+translateY(8px)->0 on --ease-out;
 // close always runs at 150ms on --ease-in (section 11.5).
+// The command palette (section 11.4-E) is the one dialog anchored 12vh from the top instead of
+// centred - "position" only ever needs these two values, so it is a plain union, not a scale.
 function DialogContent({
   className,
   children,
   size = "md",
+  position = "center",
   showCloseButton = true,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
-  size?: "sm" | "md" | "lg"
+  size?: "sm" | "md" | "lg" | "palette"
+  position?: "center" | "top"
   showCloseButton?: boolean
 }) {
   return (
@@ -70,7 +75,11 @@ function DialogContent({
         data-slot="dialog-content"
         style={{ width: `min(${DIALOG_SIZE_WIDTH[size]}, calc(100vw - 2rem))` }}
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 flex max-h-[85vh] -translate-x-1/2 -translate-y-1/2 flex-col gap-5 overflow-hidden rounded-card border border-border bg-surface p-6 text-sm text-ink shadow-modal opacity-0 outline-none transition-[opacity,transform] duration-[var(--duration-base)] ease-out data-[state=closed]:translate-y-2 data-[state=closed]:duration-[var(--duration-fast)] data-[state=closed]:ease-in data-[state=open]:translate-y-0 data-[state=open]:opacity-100",
+          "fixed left-1/2 z-50 flex max-h-[85vh] -translate-x-1/2 flex-col gap-5 overflow-hidden rounded-card border border-border bg-surface p-6 text-sm text-ink shadow-modal opacity-0 outline-none transition-[opacity,transform] duration-[var(--duration-base)] ease-out data-[state=closed]:duration-[var(--duration-fast)] data-[state=closed]:ease-in data-[state=open]:opacity-100",
+          position === "center" &&
+            "top-1/2 -translate-y-1/2 data-[state=closed]:translate-y-2 data-[state=open]:translate-y-0",
+          position === "top" &&
+            "top-[12vh] data-[state=closed]:translate-y-2 data-[state=open]:translate-y-0",
           className
         )}
         {...props}
