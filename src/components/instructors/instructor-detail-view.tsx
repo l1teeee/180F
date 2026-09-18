@@ -9,6 +9,7 @@ import { ErrorState } from '@/components/shared/error-state';
 import { LoadingSkeleton } from '@/components/shared/loading-skeleton';
 import { useInstructorDetail } from '@/hooks/use-instructor-detail';
 import { useMessages } from '@/hooks/use-messages';
+import { useSimulatedLoading } from '@/hooks/use-simulated-loading';
 import { useDemoRuntimeStore } from '@/stores/demo-runtime.store';
 import { InstructorDetail } from './instructor-detail';
 
@@ -32,9 +33,10 @@ export function InstructorDetailView({ instructorId }: { instructorId: string })
   const retryHydration = useDemoRuntimeStore((state) => state.retryHydration);
   const demoToday = useDemoRuntimeStore((state) => state.demoToday);
   const detail = useInstructorDetail(instructorId);
+  const isSimulatedLoading = useSimulatedLoading('instructorDetail');
 
   if (status === 'error') return <ErrorState title={m.instructors.errorTitle} onRetry={retryHydration} />;
-  if (status !== 'ready') return <InstructorDetailSkeleton />;
+  if (status !== 'ready' || isSimulatedLoading) return <InstructorDetailSkeleton />;
   // demoToday is always set alongside status === 'ready' (demo-runtime.store.ts hydrateDemo) -
   // checked here only so TypeScript narrows it from ISODate | null for the prop below.
   if (!detail || !demoToday) notFound();

@@ -11,11 +11,13 @@ import { LoadingSkeleton } from '@/components/shared/loading-skeleton';
 import { useAutomationsList } from '@/hooks/use-automations-list';
 import { useDemoStatus } from '@/hooks/use-demo-status';
 import { useMessages } from '@/hooks/use-messages';
+import { useSimulatedLoading } from '@/hooks/use-simulated-loading';
 import { useDemoRuntimeStore } from '@/stores/demo-runtime.store';
 
 export default function AutomationsPage() {
   const m = useMessages();
   const status = useDemoStatus();
+  const isSimulatedLoading = useSimulatedLoading('automations');
   const error = useDemoRuntimeStore((state) => state.error);
   const retryHydration = useDemoRuntimeStore((state) => state.retryHydration);
   const list = useAutomationsList();
@@ -37,12 +39,16 @@ export default function AutomationsPage() {
     );
   }
 
-  if (status !== 'ready' || !list) {
+  if (status !== 'ready' || !list || isSimulatedLoading) {
     return (
       <div className="flex flex-col gap-6">
         <PageHeader title={m.automations.pageTitle} subtitle={m.automations.pageSubtitle} />
-        <LoadingSkeleton variant="card" count={4} />
-        <LoadingSkeleton variant="chart" />
+        <LoadingSkeleton
+          variant="automation-card"
+          count={4}
+          className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4"
+        />
+        <LoadingSkeleton variant="preview" />
       </div>
     );
   }

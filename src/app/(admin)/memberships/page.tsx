@@ -11,11 +11,13 @@ import { LoadingSkeleton } from '@/components/shared/loading-skeleton';
 import { useDemoStatus } from '@/hooks/use-demo-status';
 import { useMembershipPlanRows } from '@/hooks/use-memberships-plans';
 import { useMessages } from '@/hooks/use-messages';
+import { useSimulatedLoading } from '@/hooks/use-simulated-loading';
 import { useDemoRuntimeStore } from '@/stores/demo-runtime.store';
 
 export default function MembershipsPage() {
   const m = useMessages();
   const status = useDemoStatus();
+  const isSimulatedLoading = useSimulatedLoading('memberships');
   const error = useDemoRuntimeStore((state) => state.error);
   const retryHydration = useDemoRuntimeStore((state) => state.retryHydration);
   const rows = useMembershipPlanRows();
@@ -37,11 +39,15 @@ export default function MembershipsPage() {
     );
   }
 
-  if (status !== 'ready' || !rows) {
+  if (status !== 'ready' || !rows || isSimulatedLoading) {
     return (
       <div className="flex flex-col gap-6">
         <PageHeader title={m.memberships.pageTitle} subtitle={m.memberships.pageSubtitle} />
-        <LoadingSkeleton variant="card" count={4} />
+        <LoadingSkeleton
+          variant="plan-card"
+          count={4}
+          className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4"
+        />
       </div>
     );
   }

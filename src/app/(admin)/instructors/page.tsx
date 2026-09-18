@@ -7,11 +7,13 @@ import { ErrorState } from '@/components/shared/error-state';
 import { LoadingSkeleton } from '@/components/shared/loading-skeleton';
 import { useInstructorsRoster } from '@/hooks/use-instructors-roster';
 import { useMessages } from '@/hooks/use-messages';
+import { useSimulatedLoading } from '@/hooks/use-simulated-loading';
 import { useDemoRuntimeStore } from '@/stores/demo-runtime.store';
 
 export default function InstructorsPage() {
   const m = useMessages();
   const status = useDemoRuntimeStore((state) => state.status);
+  const isSimulatedLoading = useSimulatedLoading('instructors');
   const retryHydration = useDemoRuntimeStore((state) => state.retryHydration);
   const roster = useInstructorsRoster();
 
@@ -20,8 +22,8 @@ export default function InstructorsPage() {
       <PageHeader title={m.instructors.pageTitle} subtitle={m.instructors.pageSubtitle} />
       {status === 'error' ? (
         <ErrorState title={m.instructors.errorTitle} onRetry={retryHydration} />
-      ) : status !== 'ready' || !roster ? (
-        <LoadingSkeleton variant="card" count={6} className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3" />
+      ) : status !== 'ready' || !roster || isSimulatedLoading ? (
+        <LoadingSkeleton variant="person-card" count={6} className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3" />
       ) : (
         <InstructorGrid instructors={roster} />
       )}

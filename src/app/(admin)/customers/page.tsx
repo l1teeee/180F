@@ -19,6 +19,7 @@ import { useCustomersMembershipPlans } from '@/hooks/use-customers-membership-pl
 import { useCustomersRows } from '@/hooks/use-customers-rows';
 import { useDemoStatus } from '@/hooks/use-demo-status';
 import { useMessages } from '@/hooks/use-messages';
+import { useSimulatedLoading } from '@/hooks/use-simulated-loading';
 import { useDemoRuntimeStore } from '@/stores/demo-runtime.store';
 
 const INITIAL_FILTERS: CustomerFilters = { query: '', status: 'all', membershipId: 'all' };
@@ -32,6 +33,7 @@ function CustomersPageContent() {
   const searchParams = useSearchParams();
   const m = useMessages();
   const status = useDemoStatus();
+  const isSimulatedLoading = useSimulatedLoading('customers');
   // Direct store reads for `error`/retry (not routed through a src/hooks binding) match the
   // existing precedent in src/components/booking/booking-error-state.tsx for this exact
   // infra-level concern - narrower than a business-data selector, so it stays inline per view.
@@ -43,6 +45,7 @@ function CustomersPageContent() {
   const kpis = useCustomersKpis();
   const membershipPlans = useCustomersMembershipPlans();
   const rows = useCustomersRows(filters);
+  const kpisLoading = !kpis || isSimulatedLoading;
 
   if (status === 'error') {
     return (
@@ -62,22 +65,26 @@ function CustomersPageContent() {
           already show 4-across exactly at 1024px. `xl` (1280px) is the first tier inside the
           1440px "primary" width the four-across layout is specified for. */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label={m.customers.kpis.totalCustomers} value={kpis?.totalCustomers ?? 0} icon={Users} accent="purple" loading={!kpis} />
+        <StatCard label={m.customers.kpis.totalCustomers} value={kpis?.totalCustomers ?? 0} icon={Users} accent="purple" loading={kpisLoading} />
         <StatCard
           label={m.customers.kpis.activeMemberships}
           value={kpis?.activeMemberships ?? 0}
           icon={CreditCard}
           accent="green"
-          loading={!kpis}
+          loading={kpisLoading}
         />
-        <StatCard label={m.customers.kpis.newThisMonth} value={kpis?.newThisMonth ?? 0} icon={UserPlus} accent="yellow" loading={!kpis} />
-        <StatCard label={m.customers.kpis.inactive} value={kpis?.inactive ?? 0} icon={UserX} accent="blue" loading={!kpis} />
+        <StatCard label={m.customers.kpis.newThisMonth} value={kpis?.newThisMonth ?? 0} icon={UserPlus} accent="yellow" loading={kpisLoading} />
+        <StatCard label={m.customers.kpis.inactive} value={kpis?.inactive ?? 0} icon={UserX} accent="blue" loading={kpisLoading} />
       </div>
 
       <CustomersFilterBar filters={filters} onFiltersChange={setFilters} membershipPlans={membershipPlans} />
 
       <SectionCard title={m.customers.table.sectionTitle}>
-        {status !== 'ready' ? <LoadingSkeleton variant="table-row" count={6} /> : <CustomersTable rows={rows} />}
+        {status !== 'ready' || isSimulatedLoading ? (
+          <LoadingSkeleton variant="table-row" count={6} />
+        ) : (
+          <CustomersTable rows={rows} />
+        )}
       </SectionCard>
     </div>
   );

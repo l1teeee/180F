@@ -20,6 +20,7 @@ import { useCustomersActivity } from '@/hooks/use-customers-activity';
 import { useCustomersFavoriteClassName } from '@/hooks/use-customers-favorite-class';
 import { useDemoStatus } from '@/hooks/use-demo-status';
 import { useMessages } from '@/hooks/use-messages';
+import { useSimulatedLoading } from '@/hooks/use-simulated-loading';
 import { useDemoRuntimeStore } from '@/stores/demo-runtime.store';
 
 export default function CustomerDetailPage() {
@@ -28,6 +29,7 @@ export default function CustomerDetailPage() {
   const router = useRouter();
   const m = useMessages();
   const status = useDemoStatus();
+  const isSimulatedLoading = useSimulatedLoading('customerDetail');
   // Direct store reads for `error`/`demoNow`/retry (not routed through a src/hooks binding)
   // match the existing precedent in src/components/booking/booking-error-state.tsx for this
   // exact infra-level concern, narrower than a business-data selector.
@@ -65,7 +67,7 @@ export default function CustomerDetailPage() {
     <div className="flex flex-col gap-6">
       {backLink}
 
-      {!profile || !demoNow ? (
+      {!profile || !demoNow || isSimulatedLoading ? (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
           <div className="lg:col-span-4">
             {/* Bare Card, no "Profile" section title: below, the customer's own name is this

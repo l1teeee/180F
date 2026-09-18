@@ -16,6 +16,7 @@ import { SectionCard } from '@/components/shared/section-card';
 import { StatCard } from '@/components/shared/stat-card';
 import { useClassDetail } from '@/hooks/use-class-detail';
 import { useMessages } from '@/hooks/use-messages';
+import { useSimulatedLoading } from '@/hooks/use-simulated-loading';
 import { useDemoRuntimeStore } from '@/stores/demo-runtime.store';
 
 // ADR-012: every Recharts chart loads through next/dynamic with ssr:false. The leaf chart
@@ -45,9 +46,10 @@ export function ClassDetailView({ classTypeId }: { classTypeId: string }) {
   const status = useDemoRuntimeStore((state) => state.status);
   const retryHydration = useDemoRuntimeStore((state) => state.retryHydration);
   const detail = useClassDetail(classTypeId);
+  const isSimulatedLoading = useSimulatedLoading('classDetail');
 
   if (status === 'error') return <ErrorState title={m.classes.errorTitle} onRetry={retryHydration} />;
-  if (status !== 'ready') return <ClassDetailSkeleton />;
+  if (status !== 'ready' || isSimulatedLoading) return <ClassDetailSkeleton />;
   if (!detail) notFound();
 
   return (

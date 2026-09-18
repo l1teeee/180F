@@ -10,6 +10,7 @@ import { usePublicBookingSessions } from "@/hooks/use-public-booking-sessions"
 import { usePublicBookingWizard } from "@/hooks/use-public-booking-wizard"
 import { useDateLocale } from "@/hooks/use-date-locale"
 import { useMessages } from "@/hooks/use-messages"
+import { useSimulatedLoading } from "@/hooks/use-simulated-loading"
 import { useDemoRuntimeStore } from "@/stores/demo-runtime.store"
 import { BookingSuccess } from "./booking-success"
 import { ClassStep } from "./class-step"
@@ -25,6 +26,7 @@ export function PublicBookingWizard({ initialClassId }: { initialClassId: string
   const m = useMessages()
   const { formatDisplayDate } = useDateLocale()
   const status = useDemoStatus()
+  const isSimulatedLoading = useSimulatedLoading("publicBooking")
   const hydrationError = useDemoRuntimeStore((state) => state.error)
   const wizard = usePublicBookingWizard(initialClassId)
   const classOptions = usePublicBookingCatalog()
@@ -61,7 +63,7 @@ export function PublicBookingWizard({ initialClassId }: { initialClassId: string
             description={hydrationError ?? m.publicBooking.loadError}
             onRetry={() => void useDemoRuntimeStore.getState().retryHydration()}
           />
-        ) : status !== "ready" ? (
+        ) : status !== "ready" || isSimulatedLoading ? (
           <WizardLoadingSkeleton />
         ) : wizard.step === 2 && wizard.selection.classType ? (
           <DateStep

@@ -40,6 +40,7 @@ export async function seedEnglishLocale(page: Page): Promise<void> {
 export const DEMO_STATUS_ATTRIBUTE = 'data-demo-status';
 export const DEMO_STATUS_READY = 'ready';
 const READY_SELECTOR = `body[${DEMO_STATUS_ATTRIBUTE}="${DEMO_STATUS_READY}"]`;
+const SECTION_LOADING_SELECTOR = 'body[data-section-loading]';
 
 const MISSING_SIGNAL_HINT =
   `Waiting for body[${DEMO_STATUS_ATTRIBUTE}="${DEMO_STATUS_READY}"]. ` +
@@ -53,6 +54,10 @@ const MISSING_SIGNAL_HINT =
  */
 export async function waitForDemoReady(page: Page, timeout = 15_000): Promise<void> {
   await expect(page.locator(READY_SELECTOR), MISSING_SIGNAL_HINT).toBeAttached({ timeout });
+  // Every section also shows a short simulated "fetching" skeleton after it mounts
+  // (src/hooks/use-simulated-loading.ts). It marks body[data-section-loading] for exactly as long
+  // as it lasts, so real content is on screen once that attribute is gone.
+  await expect(page.locator(SECTION_LOADING_SELECTOR)).toHaveCount(0, { timeout });
 }
 
 /**

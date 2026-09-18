@@ -28,6 +28,7 @@ import { useDateLocale } from '@/hooks/use-date-locale';
 import { useDemoStatus } from '@/hooks/use-demo-status';
 import { useMessages } from '@/hooks/use-messages';
 import { useSessionCard } from '@/hooks/use-session-card';
+import { useSimulatedLoading } from '@/hooks/use-simulated-loading';
 import { useBookingStore } from '@/stores/booking.store';
 import { useDemoRuntimeStore } from '@/stores/demo-runtime.store';
 import { useSessionStore } from '@/stores/session.store';
@@ -49,6 +50,7 @@ function BookingsPageContent() {
   const m = useMessages();
   const { formatDisplayDateShort, formatDisplayTime } = useDateLocale();
   const status = useDemoStatus();
+  const isSimulatedLoading = useSimulatedLoading('bookings');
   const router = useRouter();
   const searchParams = useSearchParams();
   const [filters, setFilters] = useState<BookingFilters>(EMPTY_FILTERS);
@@ -167,7 +169,7 @@ function BookingsPageContent() {
       />
 
       <SectionCard title={m.bookings.allBookings}>
-        {status !== 'ready' ? (
+        {status !== 'ready' || isSimulatedLoading ? (
           <div className="flex flex-col gap-5">
             <div className="flex flex-wrap gap-3">
               <Skeleton className="h-10 w-64" />

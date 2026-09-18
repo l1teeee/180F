@@ -13,11 +13,13 @@ import { NotificationsSection } from '@/components/settings/notifications-sectio
 import { useDemoStatus } from '@/hooks/use-demo-status';
 import { useMessages } from '@/hooks/use-messages';
 import { useSettingsForm } from '@/hooks/use-settings-form';
+import { useSimulatedLoading } from '@/hooks/use-simulated-loading';
 import { useDemoRuntimeStore } from '@/stores/demo-runtime.store';
 
 export default function SettingsPage() {
   const m = useMessages();
   const status = useDemoStatus();
+  const isSimulatedLoading = useSimulatedLoading('settings');
   const retryHydration = useDemoRuntimeStore((state) => state.retryHydration);
   const { settings, updateSection } = useSettingsForm();
 
@@ -30,15 +32,11 @@ export default function SettingsPage() {
     );
   }
 
-  if (status !== 'ready' || !settings) {
+  if (status !== 'ready' || !settings || isSimulatedLoading) {
     return (
       <div className="flex flex-col gap-6">
         <PageHeader title={m.settings.pageTitle} subtitle={m.settings.pageSubtitle} />
-        {/* LoadingSkeleton has no 'form-section' variant - docs/06 section 4.5 names one, but the
-           shared component (read-only to this task) only ships card/table-row/chart/kpi/text.
-           'card' is the closest existing shape; reported for hoisting rather than editing the
-           shared file (docs/12-AGENT-OWNERSHIP.md). */}
-        <LoadingSkeleton variant="card" count={4} />
+        <LoadingSkeleton variant="form-section" count={4} className="gap-6" />
       </div>
     );
   }

@@ -23,6 +23,7 @@ import { useDashboardWeeklyBookings } from '@/hooks/use-dashboard-weekly-booking
 import { useDemoStatus } from '@/hooks/use-demo-status';
 import { useMessages } from '@/hooks/use-messages';
 import { useRecentBookings } from '@/hooks/use-recent-bookings';
+import { useSimulatedLoading } from '@/hooks/use-simulated-loading';
 import { useUpcomingSessions } from '@/hooks/use-upcoming-sessions';
 import { useDemoRuntimeStore } from '@/stores/demo-runtime.store';
 
@@ -37,6 +38,7 @@ const WeeklyBookingsChart = dynamic(
 export default function DashboardPage() {
   const m = useMessages();
   const status = useDemoStatus();
+  const isSimulatedLoading = useSimulatedLoading('dashboard');
   const hydrationError = useDemoRuntimeStore((state) => state.error);
   const retryHydration = useDemoRuntimeStore((state) => state.retryHydration);
 
@@ -55,7 +57,7 @@ export default function DashboardPage() {
     );
   }
 
-  if (status !== 'ready' || !kpis) {
+  if (status !== 'ready' || !kpis || isSimulatedLoading) {
     return <DashboardSkeleton />;
   }
 
