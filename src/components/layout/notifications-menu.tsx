@@ -23,6 +23,13 @@ const TYPE_ICON: Record<NotificationType, LucideIcon> = {
   waitlist_promoted: CheckCheck,
 };
 
+// Pure, store-free (docs/08 selector contract) - kept local to this file rather than in
+// src/domain/selectors because that directory is outside this task's write set; it takes the
+// notifications array as a plain argument and never imports a store itself.
+function selectUnreadCount(notifications: Notification[]): number {
+  return notifications.filter((notification) => !notification.read).length;
+}
+
 // Relative to the demo clock only (ADR-018) - never Date.now(). Kept local to this file:
 // src/lib/dates.ts is read-only for this task and has no relative-time helper of its own yet.
 function formatRelativeToDemoNow(iso: string, demoNow: string): string {
@@ -80,7 +87,7 @@ export function NotificationsMenu() {
   const notificationsOpen = useUiStore((state) => state.notificationsOpen);
   const setNotificationsOpen = useUiStore((state) => state.setNotificationsOpen);
 
-  const unreadCount = useMemo(() => notifications.filter((notification) => !notification.read).length, [notifications]);
+  const unreadCount = useMemo(() => selectUnreadCount(notifications), [notifications]);
 
   return (
     <DropdownMenu open={notificationsOpen} onOpenChange={setNotificationsOpen}>

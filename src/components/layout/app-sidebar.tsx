@@ -95,11 +95,11 @@ export function AppSidebar({ items }: AppSidebarProps) {
     router.replace('/login');
   }
 
-  // Part 1 (this handoff): no BookingDialog is wired anywhere in the app yet - only a static
-  // specimen exists under src/app/design-system. Per the task brief, the primary action is wired
-  // and intentionally does nothing visible rather than inventing a dialog; this needs connecting
-  // once a real BookingDialog exists (see the handoff report).
-  function handleNewBooking() {}
+  // Navigates to the bookings screen with ?new=1; BookingsPage (owned elsewhere) reads that
+  // query param to open its BookingDialog on arrival and then clears it.
+  function handleNewBooking() {
+    router.push('/bookings?new=1');
+  }
 
   const primaryItems = items.filter((item) => !SECONDARY_NAV_LABELS.has(item.label));
   const secondaryItems = items.filter((item) => SECONDARY_NAV_LABELS.has(item.label));
@@ -163,9 +163,9 @@ export function AppSidebar({ items }: AppSidebarProps) {
         </button>
       </div>
 
-      <RailNav items={primaryItems} pathname={pathname} collapsed={collapsed} />
+      <RailNav items={primaryItems} pathname={pathname} collapsed={collapsed} label="Primary navigation" />
       <div role="separator" className={cn('my-3 shrink-0 bg-shell-line', collapsed ? 'mx-auto h-px w-4' : 'mx-3 h-px')} />
-      <RailNav items={secondaryItems} pathname={pathname} collapsed={collapsed} />
+      <RailNav items={secondaryItems} pathname={pathname} collapsed={collapsed} label="Secondary navigation" />
 
       {/* Bottom cluster - docs/03 section 14.2 point 7, pinned with margin-top: auto */}
       <div className="mt-auto shrink-0 px-3 pt-2">
@@ -243,13 +243,15 @@ function RailNav({
   items,
   pathname,
   collapsed,
+  label,
 }: {
   items: NavItem[];
   pathname: string;
   collapsed: boolean;
+  label: string;
 }) {
   return (
-    <nav aria-label="Primary" className="flex flex-col gap-1.5 overflow-y-auto px-3 py-1">
+    <nav aria-label={label} className="flex flex-col gap-1.5 overflow-y-auto px-3 py-1">
       {items.map((item) => {
         const Icon = NAV_ICONS[item.icon] ?? Circle;
         const active = isActiveRoute(pathname, item.href);

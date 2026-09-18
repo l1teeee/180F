@@ -468,3 +468,20 @@ Codex ran the seed and found the dashboard disagreeing with itself: the Today's 
 
 ### Consequences
 Cancelling a booking for today now lowers the KPI and the chart together, by one, immediately. The Playwright flow that asserts the KPI moves by exactly one on creation gains the symmetric cancellation assertion.
+
+---
+
+## ADR-024 - The daily reservation limit governs seats, not waitlist entries; promotion is explicit
+
+### Context
+A reviewer hit a dead end: with `maxReservationsPerDay` set to 2, clicking **Join waitlist** on a full session for a customer who already had two bookings that day showed a warning and then did nothing at all - an enabled button with no effect and no explanation. Separately, Settings states "Let customers join a full class and get promoted when a spot opens" and the booking dialog says "we will reach out the moment a spot opens", yet no promotion path exists anywhere in the product. A reviewer freed a seat on a session with three people waiting and none of them moved.
+
+### Chosen solution
+1. **The daily limit counts seats, not intentions.** `maxReservationsPerDay` applies to bookings that consume a spot - confirmed and pending - exactly as ADR-008 defines occupancy. A waitlist entry consumes nothing and is not capped by it. This is also what a studio means by the rule: two classes a day, not two hopes a day.
+2. **No enabled control may do nothing.** Any rejected action states its reason where the user is looking. A guard that can reject must either disable the control and explain, or accept the click and report the outcome.
+3. **Promotion is an explicit action, and it exists.** A waitlisted booking shows a **Promote** action wherever waitlist rows appear, enabled only while the session has a free seat, committing through the same serialized, capacity-rechecked path as any other mutation (ADR-017). Cancelling a booking on a session with people waiting surfaces that a seat has opened.
+
+Automatic promotion was rejected: a demo that silently reshuffles bookings while the presenter is talking is harder to explain than one where they click Promote and narrate it.
+
+### Consequences
+The product's own copy becomes true. The waitlist stops being a label and becomes a demonstrable behaviour, which is one of the few places the demo can show judgement rather than just data.

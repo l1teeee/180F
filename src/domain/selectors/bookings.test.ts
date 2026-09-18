@@ -1,11 +1,12 @@
 // docs/08-STATE-MANAGEMENT.md section 4 / docs/11-TEST-PLAN.md section 3.
 import { describe, expect, it } from 'vitest';
-import type { Booking, ClassSession, Customer } from '@/domain/types';
+import type { Booking, ClassSession, Customer, StudioSettings } from '@/domain/types';
 import {
   filterBookings,
   indexBookingsByCustomer,
   indexBookingsBySession,
   selectBookingCountsByDate,
+  selectBookingEligibility,
   selectRecentBookings,
 } from './bookings';
 
@@ -91,5 +92,127 @@ describe('selectBookingCountsByDate', () => {
     expect(counts.get('2026-09-17')).toBe(2);
     // ses-2 / 2026-09-18: bkg-3 cancelled, bkg-4 waitlist - neither counts, so no entry at all
     expect(counts.has('2026-09-18')).toBe(false);
+  });
+});
+
+describe('selectBookingEligibility - daily limit governs seats, not waitlist entries (ADR-024)', () => {
+  const DEMO_NOW = '2026-09-17T09:00:00.000-05:00';
+
+  function makeSettings(overrides: Partial<StudioSettings['booking']> = {}): StudioSettings {
+    return {
+      general: {
+        studioName: '180 Fitness Studio',
+        email: 'hello@180fitness.app',
+        phone: '+57 601 000 0180',
+        address: 'Carrera 11 # 93-45, Bogotá',
+        timezone: 'America/Bogota',
+      },
+      booking: { cancellationWindowHours: 12, maxReservationsPerDay: 2, waitlistEnabled: true, advanceBookingDays: 14, ...overrides },
+      notifications: { whatsappConfirmations: true, emailConfirmations: false, reminderHoursBefore: 24 },
+      branding: { logo: null, primaryColor: '#7869D4', accentColor: '#F5D889' },
+    };
+  }
+
+  function makeCustomer(overrides: Partial<Customer> = {}): Customer {
+    return {
+      id: 'cus-a',
+      name: 'Customer A',
+      email: 'customer-a@demo.180fitness.app',
+      phone: '+57 300 000 0001',
+      avatar: null,
+      status: 'active',
+      membershipId: 'plan-unlimited',
+      joinedAt: '2026-01-01',
+      ...overrides,
+    };
+  }
+
+  function makeDaySession(overrides: Partial<ClassSession> = {}): ClassSession {
+    return { id: 'ses-1', classTypeId: 'ct-a', instructorId: 'ins-01', date: '2026-09-18', startTime: '06:00', endTime: '06:50', capacity: 10, room: 'Studio A', status: 'scheduled', ...overrides };
+  }
+
+  function makeDayBooking(overrides: Partial<Booking> = {}): Booking {
+    return { id: 'bkg-x', customerId: 'cus-a', sessionId: 'ses-1', status: 'confirmed', source: 'website', createdAt: DEMO_NOW, checkedInAt: null, cancelledAt: null, ...overrides };
+  }
+
+  it('allows a waitlist join even when the customer already holds maxReservationsPerDay confirmed seats that day', () => {
+    const targetSession = makeDaySession({ id: 'ses-target', capacity: 1 });
+    const otherSessions: ClassSession[] = [
+      targetSession,
+      makeDaySession({ id: 'ses-1', startTime: '06:00', endTime: '06:50' }),
+      makeDaySession({ id: 'ses-2', startTime: '07:00', endTime: '07:50' }),
+    ];
+    const customer = makeCustomer();
+    const bookings: Booking[] = [
+      makeDayBooking({ id: 'bkg-1', sessionId: 'ses-1', status: 'confirmed' }),
+      makeDayBooking({ id: 'bkg-2', sessionId: 'ses-2', status: 'confirmed' }),
+      // Someone else holds the target session's only spot, so it is full.
+      makeDayBooking({ id: 'bkg-3', customerId: 'cus-other', sessionId: targetSession.id, status: 'confirmed' }),
+    ];
+
+    const result = selectBookingEligibility({
+      session: targetSession,
+      customer,
+      bookings,
+      sessions: otherSessions,
+      settings: makeSettings({ maxReservationsPerDay: 2 }),
+      demoNow: DEMO_NOW,
+      requestedStatus: 'waitlist',
+    });
+
+    expect(result.allowed).toBe(true);
+  });
+
+  it('does not count an existing waitlist entry toward the daily seat tally for a new confirmed booking', () => {
+    const targetSession = makeDaySession({ id: 'ses-target', capacity: 10 });
+    const otherSessions: ClassSession[] = [
+      targetSession,
+      makeDaySession({ id: 'ses-1', startTime: '06:00', endTime: '06:50' }),
+      makeDaySession({ id: 'ses-2', startTime: '07:00', endTime: '07:50' }),
+    ];
+    const customer = makeCustomer();
+    const bookings: Booking[] = [
+      makeDayBooking({ id: 'bkg-1', sessionId: 'ses-1', status: 'confirmed' }), // one real seat
+      makeDayBooking({ id: 'bkg-2', sessionId: 'ses-2', status: 'waitlist' }), // a hope, not a seat
+    ];
+
+    const result = selectBookingEligibility({
+      session: targetSession,
+      customer,
+      bookings,
+      sessions: otherSessions,
+      settings: makeSettings({ maxReservationsPerDay: 2 }),
+      demoNow: DEMO_NOW,
+      requestedStatus: 'confirmed',
+    });
+
+    expect(result.allowed).toBe(true);
+  });
+
+  it('still rejects a confirmed booking once the customer already holds maxReservationsPerDay seats that day', () => {
+    const targetSession = makeDaySession({ id: 'ses-target', capacity: 10 });
+    const otherSessions: ClassSession[] = [
+      targetSession,
+      makeDaySession({ id: 'ses-1', startTime: '06:00', endTime: '06:50' }),
+      makeDaySession({ id: 'ses-2', startTime: '07:00', endTime: '07:50' }),
+    ];
+    const customer = makeCustomer();
+    const bookings: Booking[] = [
+      makeDayBooking({ id: 'bkg-1', sessionId: 'ses-1', status: 'confirmed' }),
+      makeDayBooking({ id: 'bkg-2', sessionId: 'ses-2', status: 'pending' }),
+    ];
+
+    const result = selectBookingEligibility({
+      session: targetSession,
+      customer,
+      bookings,
+      sessions: otherSessions,
+      settings: makeSettings({ maxReservationsPerDay: 2 }),
+      demoNow: DEMO_NOW,
+      requestedStatus: 'confirmed',
+    });
+
+    expect(result.allowed).toBe(false);
+    if (!result.allowed) expect(result.reason).toBe('daily_limit_reached');
   });
 });

@@ -61,6 +61,8 @@ export function BookingFiltersBar({ filters, onFiltersChange, onReset }: Booking
 
       <Input
         type="date"
+        id="bookings-date-filter"
+        name="date"
         aria-label="Filter by date"
         value={filters.date ?? ''}
         onChange={(event) => onFiltersChange({ ...filters, date: event.target.value || null })}

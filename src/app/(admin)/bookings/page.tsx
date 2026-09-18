@@ -4,7 +4,8 @@
 // open the same BookingDialog; cancelling reuses the shared destructive ConfirmDialog
 // (docs/03-DESIGN-SYSTEM.md section 11.4-B) with override: true (docs/08-STATE-MANAGEMENT.md
 // section 8.3: "Admin actions may pass an explicit override: true").
-import { Suspense, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { X } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageHeader } from '@/components/layout/page-header';
@@ -18,6 +19,7 @@ import { BookingDialog } from '@/components/bookings/booking-dialog';
 import { BookingFiltersBar } from '@/components/bookings/booking-filters';
 import { BookingsTable } from '@/components/bookings/bookings-table';
 import { StatusTabs } from '@/components/bookings/status-tabs';
+import { indexBookingsBySession, selectSessionOccupancy } from '@/domain/selectors';
 import type { BookingFilters, BookingRow } from '@/domain/types';
 import { useBookingRows } from '@/hooks/use-booking-rows';
 import { useBookingsSessionFilter } from '@/hooks/use-bookings-session-filter';
@@ -27,6 +29,7 @@ import { useSessionCard } from '@/hooks/use-session-card';
 import { formatDisplayDateShort, formatDisplayTime } from '@/lib/dates';
 import { useBookingStore } from '@/stores/booking.store';
 import { useDemoRuntimeStore } from '@/stores/demo-runtime.store';
+import { useSessionStore } from '@/stores/session.store';
 
 const EMPTY_FILTERS: BookingFilters = { query: '', status: 'all', source: 'all', date: null };
 
@@ -43,9 +46,38 @@ export default function BookingsPage() {
 
 function BookingsPageContent() {
   const status = useDemoStatus();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [filters, setFilters] = useState<BookingFilters>(EMPTY_FILTERS);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [cancelTarget, setCancelTarget] = useState<BookingRow | null>(null);
+  const [promotingId, setPromotingId] = useState<string | null>(null);
+
+  const bookings = useBookingStore((state) => state.bookings);
+  const sessions = useSessionStore((state) => state.sessions);
+
+  // Sidebar rail contract (app-sidebar.tsx): "New booking" pushes /bookings?new=1 from any admin
+  // page. Opening the dialog reacts to a fresh ?new=1 by adjusting state during render (the same
+  // "derive state from a changed value" pattern confirm-dialog.tsx uses for its own opener
+  // capture) rather than in an effect, so it happens exactly once per distinct arrival of the
+  // param, whether that is the first load or a later click of the same sidebar button while
+  // already on this page - lastHandledSearch is the "have we already reacted to this URL" guard.
+  const searchString = searchParams.toString();
+  const [lastHandledSearch, setLastHandledSearch] = useState<string | null>(null);
+  if (searchString !== lastHandledSearch) {
+    setLastHandledSearch(searchString);
+    if (searchParams.get('new') === '1') setDialogOpen(true);
+  }
+
+  // Strips the `new` param once it has been read above - a router call, not a setState, so a
+  // refresh of the resulting plain /bookings URL never reopens the dialog.
+  useEffect(() => {
+    if (searchParams.get('new') !== '1') return;
+    const next = new URLSearchParams(searchParams);
+    next.delete('new');
+    const query = next.toString();
+    router.replace(query ? `/bookings?${query}` : '/bookings');
+  }, [searchParams, router]);
 
   // Tab counts intentionally ignore the status filter itself (docs/08 section 6 point 5: this
   // object is passed down from a render body, so it is memoised here rather than inside the hook).
@@ -57,6 +89,20 @@ function BookingsPageContent() {
   const rows = useBookingRows(filters);
   const sessionFilter = useBookingsSessionFilter(rows);
   const filteredSession = useSessionCard(sessionFilter.sessionId ?? '');
+
+  // ADR-024: a waitlist row may be promoted only while its session currently has a free seat.
+  // Recomputed from the live ledger on every bookings/sessions change, so cancelling a booking on
+  // a full session with people waiting turns this on for that session's rows immediately - the
+  // visible sign a seat opened, no separate flag to keep in sync.
+  const promotableSessionIds = useMemo(() => {
+    const bookingsBySession = indexBookingsBySession(bookings);
+    const ids = new Set<string>();
+    for (const session of sessions) {
+      const occupancy = selectSessionOccupancy(session, bookingsBySession.get(session.id) ?? []);
+      if (occupancy.available > 0) ids.add(session.id);
+    }
+    return ids;
+  }, [bookings, sessions]);
 
   function handleTabChange(tab: BookingsTabKey) {
     setFilters((prev) => ({ ...prev, status: tab }));
@@ -72,6 +118,22 @@ function BookingsPageContent() {
       throw new Error(result.reason);
     }
     toast.success('Booking cancelled');
+  }
+
+  // Direct action, no confirm dialog (ADR-024: promotion is not destructive) - still surfaces a
+  // rejection via toast rather than leaving an enabled control doing nothing (ADR-024 point 2).
+  async function handlePromote(row: BookingRow) {
+    setPromotingId(row.id);
+    try {
+      const result = await useBookingStore.getState().promoteFromWaitlist(row.id);
+      if (!result.ok) {
+        toast.error(result.message);
+        return;
+      }
+      toast.success(`${row.customer.name} promoted to confirmed.`);
+    } finally {
+      setPromotingId(null);
+    }
   }
 
   if (status === 'error') {
@@ -123,7 +185,14 @@ function BookingsPageContent() {
               </div>
             ) : null}
             <StatusTabs value={filters.status} onValueChange={handleTabChange} counts={tabCounts} />
-            <BookingsTable rows={sessionFilter.rows} onCancelRequest={setCancelTarget} onCreateBooking={() => setDialogOpen(true)} />
+            <BookingsTable
+              rows={sessionFilter.rows}
+              onCancelRequest={setCancelTarget}
+              onCreateBooking={() => setDialogOpen(true)}
+              onPromoteRequest={handlePromote}
+              promotableSessionIds={promotableSessionIds}
+              promotingId={promotingId}
+            />
           </div>
         )}
       </SectionCard>

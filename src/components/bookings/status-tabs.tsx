@@ -29,9 +29,14 @@ export function StatusTabs({ value, onValueChange, counts }: StatusTabsProps) {
           wrapping, so five tabs never break into a ragged second line. Scrollbar hidden (still
           scrollable by touch/trackpad) - a bare OS scrollbar under a pill tab row is exactly the
           "reads as stock" look docs/03's graphic line rejects. */}
-      <TabsList className="w-full justify-start overflow-x-auto [scrollbar-width:none] sm:w-fit [&::-webkit-scrollbar]:hidden">
+      {/* h-12 grows the list to fit the 40px trigger below plus its 4px p-1 padding on each
+          side; sm: hands both back to the shared 40px/32px pair above that breakpoint. */}
+      <TabsList className="h-12 w-full justify-start overflow-x-auto [scrollbar-width:none] sm:h-10 sm:w-fit [&::-webkit-scrollbar]:hidden">
         {BOOKINGS_TAB_KEYS.map((tab) => (
-          <TabsTrigger key={tab} value={tab} className="flex-none gap-2">
+          // Base TabsTrigger is a fixed 32px (ui/tabs.tsx); the 40px minimum touch target holds
+          // at mobile width, matching every other control here (docs/03 section 5 "controls 40px
+          // tall") - sm: hands it back to the shared 32px pill above that breakpoint.
+          <TabsTrigger key={tab} value={tab} className="h-10 flex-none gap-2 sm:h-8">
             {TAB_LABEL[tab]}
             <span className="tabular-nums text-text-tertiary">{counts[tab]}</span>
           </TabsTrigger>

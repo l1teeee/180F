@@ -14,6 +14,10 @@ export interface OccupancyBarProps {
   label?: string; // left-side label, e.g. class name
   showPercentage?: boolean; // default true, tabular numerals on the right
   className?: string;
+  labelClassName?: string; // caller-controlled sizing/truncation for the label, e.g. a fixed
+  // column width in a layout where labels must align - left unset, the label sizes to its own
+  // content instead of the old hardcoded 112px, which cut "Functional Training" down to
+  // "Functional Trai...".
 }
 
 // Accent -> solid fill class (not the pastel *-soft tokens): matches the design-system preview's
@@ -58,15 +62,23 @@ function BarFill({ percent, className }: { percent: number; className: string })
   );
 }
 
-export function OccupancyBar({ rate, accent, label, showPercentage = true, className }: OccupancyBarProps) {
+export function OccupancyBar({
+  rate,
+  accent,
+  label,
+  showPercentage = true,
+  className,
+  labelClassName,
+}: OccupancyBarProps) {
   const percent = Math.max(0, Math.min(100, Math.round(rate * 100)));
   return (
     // w-full sizes this correctly as a block child; min-w-0 + flex-1 size it correctly as a flex
     // child too (its own inner track span is flex-1, which otherwise collapses to 0px width when
     // the parent hands it no basis - docs/03 section 6 "Occupancy bars").
     <div className={cn('flex w-full min-w-0 flex-1 items-center gap-3', className)}>
-
-      {label ? <span className="w-28 shrink-0 truncate text-sm font-medium text-ink">{label}</span> : null}
+      {label ? (
+        <span className={cn('shrink-0 text-sm font-medium text-ink', labelClassName)}>{label}</span>
+      ) : null}
       <span className="h-2 flex-1 overflow-hidden rounded-pill bg-surface-muted">
         <BarFill percent={percent} className={ACCENT_FILL_CLASSNAME[accent]} />
       </span>

@@ -89,7 +89,7 @@ This is a frontend-only demo (master plan 2, architecture 1, architecture 10): n
 4. Point to Upcoming classes and Recent bookings (master plan 20, 21).
 
 **Talk track:**
-"148 active members, up 8 this month. Today's bookings compared to yesterday. Occupancy across all classes, around 87 percent, which is healthy for a boutique studio. And today's class count, with a flag for anything nearly full. This week's booking pattern is right here — you can already see which days are busiest. And below, the next few classes coming up and the most recent reservations, so you don't have to go looking for either."
+"132 active members, up 8 this month. Today's bookings compared to yesterday. Occupancy across all classes, around 87 percent, which is healthy for a boutique studio. And today's class count, with a flag for anything nearly full. This week's booking pattern is right here — you can already see which days are busiest. And below, the next few classes coming up and the most recent reservations, so you don't have to go looking for either."
 
 **Point to land:** everything an owner checks every morning is on one screen, and every number ties back to the same underlying bookings — nothing here is a separate, hand-typed figure.
 
@@ -357,3 +357,11 @@ Short, direct answers for common owner questions. Say the plain-language answer 
 The strongest version of beats 12 to 17 uses two browser tabs or two windows: the public booking flow at `/book` in a narrow window sized like a phone, and the admin dashboard in a wide one. Demo state syncs between tabs within a moment (ADR-022), so when the booking is confirmed on the phone, the admin's Today's bookings figure and the bookings table update without a reload. Say so while it happens: "Nothing was refreshed. The studio's screen just knew."
 
 Rehearse it once before the meeting, then reset the demo data so the client sees a clean studio.
+
+---
+
+## A note on the numbers in this script
+
+Quote the screen, not this document. The dataset is regenerated from the current date, so totals shift slightly day to day: active members and total customers are stable at 132 of 148, and overall occupancy sits between 80 and 87 percent, but the exact bookings figure for today changes.
+
+If a number in this script and a number on the screen disagree, the screen is right. Read it aloud from the card; it is more convincing than a memorised figure anyway.

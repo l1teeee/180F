@@ -58,7 +58,10 @@ function DefaultMobileCard<Row>({
     >
       {columns.map((column) => (
         <div key={column.id} className="flex items-center justify-between gap-3 text-sm">
-          <span className="text-xs font-semibold tracking-[0.04em] text-text-tertiary uppercase">{column.header}</span>
+          {/* text-secondary, not text-tertiary: this label is the mobile-card equivalent of a
+              table column header (same "text people must read" contrast requirement as
+              ui/table.tsx's TableHead - tertiary measures 2.52:1 against white). */}
+          <span className="text-xs font-semibold tracking-[0.04em] text-text-secondary uppercase">{column.header}</span>
           <span className={cn('text-right text-ink', column.className)}>{column.cell(row)}</span>
         </div>
       ))}

@@ -183,18 +183,24 @@ export function selectBookingEligibility(params: BookingEligibilityParams): Book
     return reject('already_booked', 'This customer already has a booking for this session.');
   }
 
-  const sessionDateById = new Map(sessions.map((s) => [s.id, s.date]));
-  const activeBookingsOnSameDay = bookings.filter((booking) => {
-    if (booking.customerId !== customer.id) return false;
-    if (booking.status === 'cancelled') return false;
-    if (booking.sessionId === session.id) return false; // already covered by already_booked above
-    return sessionDateById.get(booking.sessionId) === session.date;
-  }).length;
-  if (activeBookingsOnSameDay >= settings.booking.maxReservationsPerDay) {
-    return reject(
-      'daily_limit_reached',
-      `This customer already has ${settings.booking.maxReservationsPerDay} booking(s) on this day.`,
-    );
+  // ADR-024: the daily limit counts seats, not intentions - only confirmed and pending bookings
+  // (the same statuses ADR-008 counts as occupying a spot). A waitlist entry never consumes a
+  // seat, so an existing one never counts toward this tally, and a new waitlist request is never
+  // itself capped by it - "two classes a day, not two hopes a day".
+  if (requestedStatus !== 'waitlist') {
+    const sessionDateById = new Map(sessions.map((s) => [s.id, s.date]));
+    const seatsBookedOnSameDay = bookings.filter((booking) => {
+      if (booking.customerId !== customer.id) return false;
+      if (booking.status !== 'confirmed' && booking.status !== 'pending') return false;
+      if (booking.sessionId === session.id) return false; // already covered by already_booked above
+      return sessionDateById.get(booking.sessionId) === session.date;
+    }).length;
+    if (seatsBookedOnSameDay >= settings.booking.maxReservationsPerDay) {
+      return reject(
+        'daily_limit_reached',
+        `This customer already has ${settings.booking.maxReservationsPerDay} booking(s) on this day.`,
+      );
+    }
   }
 
   const today = demoNow.slice(0, 10);

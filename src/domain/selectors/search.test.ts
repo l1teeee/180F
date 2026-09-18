@@ -50,4 +50,34 @@ describe('selectGlobalSearch', () => {
     const instructorResult = results.find((r) => r.kind === 'instructor');
     expect(instructorResult?.href).toBe('/instructors/ins-03');
   });
+
+  it('finds a customer by their own name', () => {
+    const results = selectGlobalSearch('ana yolanda', CUSTOMERS, [], []);
+    expect(results.map((r) => r.id)).toEqual(['cus-0002']);
+  });
+
+  it('finds a class by its own name', () => {
+    const results = selectGlobalSearch('yoga', [], CLASS_TYPES, []);
+    expect(results.map((r) => r.id)).toEqual(['ct-yoga']);
+  });
+
+  it('finds an instructor by their own name, not just their specialty', () => {
+    const results = selectGlobalSearch('instructor 03', [], [], INSTRUCTORS);
+    expect(results.map((r) => r.id)).toEqual(['ins-03']);
+  });
+
+  it('still finds an instructor by specialty when the query does not match their name', () => {
+    const results = selectGlobalSearch('yoga', [], [], INSTRUCTORS);
+    expect(results.map((r) => r.id)).toEqual(['ins-03']);
+  });
+
+  it('ranks an exact name prefix match before a specialty-only match, within instructors', () => {
+    const instructors: Instructor[] = [
+      { id: 'ins-05', name: 'Instructor 05', avatar: null, specialty: 'Deep Anatomy Focus', rating: 4.7, status: 'available', bio: 'b' },
+      { id: 'ins-06', name: 'Ana Coach', avatar: null, specialty: 'Cycling', rating: 4.6, status: 'available', bio: 'b' },
+    ];
+    const results = selectGlobalSearch('ana', [], [], instructors);
+    // "Ana Coach" is a name prefix match; "Instructor 05" only matches mid-string via specialty
+    expect(results.map((r) => r.id)).toEqual(['ins-06', 'ins-05']);
+  });
 });

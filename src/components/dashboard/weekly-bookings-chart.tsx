@@ -117,11 +117,28 @@ export function WeeklyBookingsChart({ data }: WeeklyBookingsChartProps) {
     );
   }
 
+  // Recharts gives the chart's root <svg> role="application" and tabIndex={0} by default (its
+  // accessibility layer), so it is a real stop in the tab order - it needs the same name a sighted
+  // reader gets from this card's "Weekly bookings" heading plus what the numbers actually say.
+  // `title` renders as that <svg>'s native <title>, the standard way an SVG gets an accessible
+  // name, so this reuses the sr-only summary text below instead of keeping two copies of it.
+  const chartSummary =
+    data.length > 0
+      ? `Weekly bookings from ${data[0]?.label} to ${data[highlightIndex]?.label}, ranging from ${min} to ${max} bookings. ${
+          highlight ? `${highlight.label} is highlighted at ${highlight.bookings} bookings.` : ''
+        }`
+      : 'No weekly booking data available.';
+
   return (
     <div className="flex flex-col gap-3">
       <div style={{ height: CHART_HEIGHT }}>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: CHART_TOP_MARGIN, right: 8, left: 8, bottom: 0 }} barCategoryGap="28%">
+          <BarChart
+            data={data}
+            margin={{ top: CHART_TOP_MARGIN, right: 8, left: 8, bottom: 0 }}
+            barCategoryGap="28%"
+            title={chartSummary}
+          >
             <defs>
               <pattern id={hatchId} width={12} height={12} patternUnits="userSpaceOnUse" patternTransform="rotate(135)">
                 <rect width={12} height={12} className="fill-surface" />
@@ -146,13 +163,7 @@ export function WeeklyBookingsChart({ data }: WeeklyBookingsChartProps) {
           </BarChart>
         </ResponsiveContainer>
       </div>
-      <p className="sr-only">
-        {data.length > 0
-          ? `Weekly bookings from ${data[0]?.label} to ${data[highlightIndex]?.label}, ranging from ${min} to ${max} bookings. ${
-              highlight ? `${highlight.label} is highlighted at ${highlight.bookings} bookings.` : ''
-            }`
-          : 'No weekly booking data available.'}
-      </p>
+      <p className="sr-only">{chartSummary}</p>
     </div>
   );
 }

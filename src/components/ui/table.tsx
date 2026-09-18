@@ -5,7 +5,9 @@ import * as React from "react"
 import { cn } from "@/lib/cn"
 
 // docs/03 section 5 "Table": no outer border, 1px row dividers, 52px rows, 12px/600 uppercase
-// header in --color-text-tertiary, hover row --color-surface-muted.
+// header, hover row --color-surface-muted. Header text uses --color-text-secondary, not
+// --color-text-tertiary: docs/03 section 10 restricts tertiary to decorative/disabled use and
+// it measures 2.52:1 against white, well under the 4.5:1 AA floor for text people must read.
 function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
     <div data-slot="table-container" className="relative w-full overflow-x-auto">
@@ -60,7 +62,7 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
     <th
       data-slot="table-head"
       className={cn(
-        "h-11 px-3 text-left align-middle text-xs font-semibold tracking-[0.04em] text-text-tertiary uppercase [&:has([role=checkbox])]:pr-0",
+        "h-11 px-3 text-left align-middle text-xs font-semibold tracking-[0.04em] text-text-secondary uppercase [&:has([role=checkbox])]:pr-0",
         className
       )}
       {...props}

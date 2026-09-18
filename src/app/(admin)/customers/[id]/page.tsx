@@ -14,6 +14,7 @@ import { LoadingSkeleton } from '@/components/shared/loading-skeleton';
 import { SectionCard } from '@/components/shared/section-card';
 import { StatCard } from '@/components/shared/stat-card';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { useCustomerProfile } from '@/hooks/use-customer-profile';
 import { useCustomersActivity } from '@/hooks/use-customers-activity';
 import { useCustomersFavoriteClassName } from '@/hooks/use-customers-favorite-class';
@@ -65,9 +66,13 @@ export default function CustomerDetailPage() {
       {!profile || !demoNow ? (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
           <div className="lg:col-span-4">
-            <SectionCard title="Profile">
+            {/* Bare Card, no "Profile" section title: below, the customer's own name is this
+                page's h1 (docs/03 "heading order" - the same reasoning as
+                instructor-profile-card.tsx, which is also a name-card with no SectionCard chrome
+                around it) - a CardTitle here would put an h2 before the page's only h1. */}
+            <Card>
               <LoadingSkeleton variant="card" />
-            </SectionCard>
+            </Card>
           </div>
           <div className="flex flex-col gap-6 lg:col-span-8">
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -84,9 +89,9 @@ export default function CustomerDetailPage() {
       ) : (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
           <div className="lg:col-span-4">
-            <SectionCard title="Profile">
+            <Card>
               <CustomerProfile customer={profile} />
-            </SectionCard>
+            </Card>
           </div>
           <div className="flex flex-col gap-6 lg:col-span-8">
             <CustomerStats stats={profile} favoriteClassName={favoriteClassName} />

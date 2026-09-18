@@ -36,9 +36,13 @@ function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
-function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
+// h2: section titles (e.g. "Weekly bookings", "General") sit directly under a page's own h1
+// (PageHeader) with no intervening heading, so h2 is the correct level - a plain div here left
+// every section title unreachable by heading navigation. Visible style is unchanged; only the
+// element changes.
+function CardTitle({ className, ...props }: React.ComponentProps<"h2">) {
   return (
-    <div
+    <h2
       data-slot="card-title"
       className={cn("text-[20px] leading-tight font-[650] text-ink", className)}
       {...props}

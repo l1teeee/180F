@@ -33,6 +33,16 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <div className="flex h-screen overflow-hidden bg-shell">
+      {/* First focusable element on every admin route (docs/03 section 10): without it, a
+          keyboard user hits 11-17 tab stops (rail nav + top bar) before reaching page content.
+          Hidden until focused, then rendered on the frame above everything else. */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-pill focus:bg-ink focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"
+      >
+        Skip to main content
+      </a>
+
       <AppSidebar items={NAV_ITEMS} />
       <MobileNav items={NAV_ITEMS} open={sidebarOpen} onOpenChange={setSidebarOpen} />
 
@@ -45,7 +55,13 @@ export function AppShell({ children }: AppShellProps) {
        */}
       <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto bg-background md:my-2 md:mr-2 md:rounded-[20px] md:shadow-[0_18px_50px_rgba(20,16,38,0.28)] lg:my-3 lg:mr-3 lg:rounded-[28px]">
         <TopBar user={{ name: user?.name ?? 'Studio Admin', role: 'Administrator' }} />
-        <main className="mx-auto w-full max-w-[1500px] flex-1 px-4 py-6 sm:px-6 lg:px-7 lg:py-7">{children}</main>
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="mx-auto w-full max-w-[1500px] flex-1 px-4 py-6 outline-none sm:px-6 lg:px-7 lg:py-7"
+        >
+          {children}
+        </main>
       </div>
 
       <GlobalSearch />

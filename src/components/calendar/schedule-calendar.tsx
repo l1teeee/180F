@@ -72,12 +72,12 @@ export default function ScheduleCalendar({
 
   // Runs once on mount - by then FullCalendarComponent's own componentDidMount has already run
   // synchronously, so getApi() is available. calendar-view.tsx passes a useCallback-stabilised
-  // onApiReady, so this never needs to refire on a later prop change.
+  // onApiReady (identity never changes), so declaring it as a dependency here is honest and
+  // still never causes a refire.
   useEffect(() => {
     const api = calendarRef.current?.getApi();
     if (api) onApiReady(api);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [onApiReady]);
 
   return (
     <div className="h-[720px] [--fc-border-color:var(--color-border)] [--fc-today-bg-color:var(--color-purple-xsoft)] [--fc-now-indicator-color:var(--color-danger-deep)] [--fc-page-bg-color:transparent]">

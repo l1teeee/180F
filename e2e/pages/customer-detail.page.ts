@@ -12,7 +12,9 @@ export class CustomerDetailPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.nameHeading = page.getByRole('heading', { name: /customer \d+/i, level: 2 });
+    // level: 1 - the customer's name is this page's document title (fixed from an h2, which left
+    // the page with no h1 for a screen reader user; verified there is no other heading above it).
+    this.nameHeading = page.getByRole('heading', { name: /customer \d+/i, level: 1 });
     this.membershipText = page.getByText('Membership', { exact: true }).first();
     // ActivityTimeline (src/components/customers/activity-timeline.tsx) renders a real <ul>,
     // but it is the SECOND one on the page - the first is the membership card's own one-item

@@ -89,7 +89,7 @@ export function CustomerProfile({ customer }: CustomerProfileProps) {
           fallbackInitials={initialsFor(customer.name)}
         />
         <div className="flex flex-col gap-1.5">
-          <h2 className="text-[20px] leading-tight font-[650] text-ink">{customer.name}</h2>
+          <h1 className="text-[20px] leading-tight font-[650] text-ink">{customer.name}</h1>
           <StatusBadge status={customer.status} />
         </div>
       </div>

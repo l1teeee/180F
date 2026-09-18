@@ -44,7 +44,12 @@ export function BookingDialog({ open, onOpenChange }: BookingDialogProps) {
   const { dates, sessionsByDate } = useBookingsSessionOptions(selectedClassTypeId);
   const sessionsForDate = selectedDate ? (sessionsByDate.get(selectedDate) ?? []) : [];
 
-  const sortedCustomers = useMemo(() => [...customers].sort((a, b) => a.name.localeCompare(b.name)), [customers]);
+  // { numeric: true } compares embedded digit runs by value, not lexically - without it
+  // "Customer 100" sorts between "Customer 10" and "Customer 11".
+  const sortedCustomers = useMemo(
+    () => [...customers].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true })),
+    [customers],
+  );
 
   const form = useForm<NewBookingInputSchema>({
     resolver: zodResolver(newBookingInputSchema),

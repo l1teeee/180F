@@ -32,7 +32,12 @@ function initialsFor(name: string): string {
 
 function CustomerCell({ customer }: { customer: CustomerWithStats }) {
   return (
-    <div className="flex items-center gap-2.5">
+    // onDragStart: a plain <img> is natively draggable, so a mouse-down that drifts even a
+    // couple of pixels before mouse-up on the avatar starts a native browser drag instead of a
+    // click - the row's onClick (DataTable) never fires, and it takes a second, stiller click to
+    // open the profile. Blocking dragstart here (it bubbles up from the <img>) keeps the row a
+    // reliable one-click target without touching the shared DataTable/Avatar primitives.
+    <div className="flex items-center gap-2.5" onDragStart={(event) => event.preventDefault()}>
       <AvatarBlobatar
         seed={customer.id}
         palette={paletteForAccent(accentForCustomerId(customer.id))}
@@ -70,7 +75,14 @@ function CustomerMobileCard({ customer, onOpen }: { customer: CustomerWithStats;
 
   return (
     <div className="flex flex-col gap-3 rounded-card-sm border border-border bg-surface p-4">
-      <button type="button" onClick={onOpen} className="flex items-center gap-3 text-left">
+      {/* onDragStart: see CustomerCell above - the same native image-drag can swallow a tap/click
+          that starts on this avatar. */}
+      <button
+        type="button"
+        onClick={onOpen}
+        onDragStart={(event) => event.preventDefault()}
+        className="flex items-center gap-3 text-left"
+      >
         <AvatarBlobatar
           seed={customer.id}
           palette={paletteForAccent(accentForCustomerId(customer.id))}

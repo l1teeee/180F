@@ -14,7 +14,11 @@
 
   /* text + lines */
   --color-ink: #171717; /* = text-primary, also the strong accent */
-  --color-text-secondary: #737373;
+  /* Darkened from #737373 (4.42:1 on --color-background, under the 4.5:1 AA floor - this token
+     is used for page subtitles and other text people must read, not decorative text). #6C6C6C
+     measures 5.25:1 on white, 4.90:1 on --color-background (#F7F7F5) and 4.64:1 on
+     --color-surface-muted (#F1F1EF), the three surfaces it actually appears on. */
+  --color-text-secondary: #6C6C6C;
   --color-text-tertiary: #A3A3A3;
   --color-border: #ECECEA;
   --color-border-soft: #F2F0FA;

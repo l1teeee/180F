@@ -17,7 +17,7 @@ export const membershipPlans: MembershipPlan[] = [
     monthlyPrice: 49,
     billingPeriod: 'monthly',
     classLimit: null,
-    benefits: ['Unlimited classes'],
+    benefits: ['Access to every class type'],
     accent: 'purple',
   },
   {
@@ -26,7 +26,7 @@ export const membershipPlans: MembershipPlan[] = [
     monthlyPrice: 69,
     billingPeriod: 'monthly',
     classLimit: null,
-    benefits: ['Unlimited classes', 'Priority booking', '1 guest pass'],
+    benefits: ['Access to every class type', 'Priority booking', '1 guest pass'],
     accent: 'yellow',
   },
   {

@@ -60,9 +60,12 @@ export function TopBar({ user }: TopBarProps) {
             onFocus={() => setSearchOpen(true)}
             placeholder="Search customers, classes..."
           />
+          {/* text-secondary, not text-tertiary: text-tertiary measures 2.52:1 on white, well
+              under the 4.5:1 AA floor for text people must read (docs/03 section 10 restricts
+              it to decorative/disabled use). */}
           <kbd
             aria-hidden="true"
-            className="pointer-events-none absolute top-1/2 right-2.5 hidden -translate-y-1/2 items-center rounded-chip border border-border bg-surface-muted px-1.5 py-0.5 text-[11px] font-semibold text-text-tertiary sm:flex"
+            className="pointer-events-none absolute top-1/2 right-2.5 hidden -translate-y-1/2 items-center rounded-chip border border-border bg-surface-muted px-1.5 py-0.5 text-[11px] font-semibold text-text-secondary sm:flex"
           >
             ⌘K
           </kbd>
@@ -87,9 +90,12 @@ export function TopBar({ user }: TopBarProps) {
         </Popover>
 
         <DropdownMenu>
+          {/* aria-label includes the visible name: an aria-label that fully replaces visible
+              text content fails WCAG 2.5.3 Label in Name when the two don't overlap (Lighthouse
+              flagged "Account menu" against the visible user.name span below). */}
           <DropdownMenuTrigger
             className="flex h-10 items-center gap-2.5 rounded-pill border border-border bg-surface pr-3 pl-1 text-sm font-semibold text-ink transition-colors duration-[var(--duration-fast)] ease-out hover:bg-surface-muted"
-            aria-label="Account menu"
+            aria-label={`Account menu, ${user.name}`}
           >
             {/*
              * docs/03 section 13 "Avatars" / ADR-021: the signed-in administrator's blobatar,

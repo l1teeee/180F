@@ -190,6 +190,115 @@ describe('cancelBooking', () => {
   });
 });
 
+describe('booking id uniqueness across entry points (docs/04 section 6, single source of ids)', () => {
+  it('creates a booking through the admin path and one through the public path with different ids', async () => {
+    const session = makeSession({ capacity: 10 });
+    seedCommonStores(session);
+
+    const adminResult = await useBookingStore
+      .getState()
+      .createBooking({ customerId: CUSTOMER_A.id, sessionId: session.id, source: 'reception' });
+    expect(adminResult.ok).toBe(true);
+
+    const publicResult = await useBookingStore.getState().createPublicBooking({
+      sessionId: session.id,
+      name: 'Public Person',
+      email: 'public-person@example.com',
+      phone: '+57 300 000 9003',
+    });
+    expect(publicResult.ok).toBe(true);
+
+    if (adminResult.ok && publicResult.ok) {
+      expect(adminResult.booking.id).not.toBe(publicResult.booking.id);
+    }
+  });
+});
+
+describe('createBooking waitlist requests are not capped by the daily reservation limit (ADR-024)', () => {
+  it('allows joining the waitlist even when the customer already has maxReservationsPerDay confirmed bookings that day', async () => {
+    const fullSession = makeSession({ id: 'ses-full', capacity: 1 });
+    const sessionOne = makeSession({ id: 'ses-1', startTime: '06:00', endTime: '06:50' });
+    const sessionTwo = makeSession({ id: 'ses-2', startTime: '07:00', endTime: '07:50' });
+    useSessionStore.setState({ sessions: [fullSession, sessionOne, sessionTwo] });
+    useCustomerStore.setState({ customers: [CUSTOMER_A, CUSTOMER_B] });
+    useSettingsStore.setState({ settings: makeSettings({ maxReservationsPerDay: 2 }) });
+    useDemoRuntimeStore.setState({ status: 'ready', demoToday: DEMO_TODAY, demoNow: DEMO_NOW, error: null });
+    useBookingStore.setState({
+      bookings: [
+        makeBooking({ id: 'bkg-seat-1', customerId: CUSTOMER_A.id, sessionId: sessionOne.id }),
+        makeBooking({ id: 'bkg-seat-2', customerId: CUSTOMER_A.id, sessionId: sessionTwo.id }),
+        makeBooking({ id: 'bkg-holds-seat', customerId: CUSTOMER_B.id, sessionId: fullSession.id }),
+      ],
+    });
+
+    const result = await useBookingStore
+      .getState()
+      .createBooking({ customerId: CUSTOMER_A.id, sessionId: fullSession.id, source: 'reception', status: 'waitlist' });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.booking.status).toBe('waitlist');
+  });
+
+  it('still rejects a third confirmed booking once the customer already holds two seats that day', async () => {
+    const thirdSession = makeSession({ id: 'ses-3', capacity: 10 });
+    const sessionOne = makeSession({ id: 'ses-1', startTime: '06:00', endTime: '06:50' });
+    const sessionTwo = makeSession({ id: 'ses-2', startTime: '07:00', endTime: '07:50' });
+    useSessionStore.setState({ sessions: [thirdSession, sessionOne, sessionTwo] });
+    useCustomerStore.setState({ customers: [CUSTOMER_A, CUSTOMER_B] });
+    useSettingsStore.setState({ settings: makeSettings({ maxReservationsPerDay: 2 }) });
+    useDemoRuntimeStore.setState({ status: 'ready', demoToday: DEMO_TODAY, demoNow: DEMO_NOW, error: null });
+    useBookingStore.setState({
+      bookings: [
+        makeBooking({ id: 'bkg-seat-1', customerId: CUSTOMER_A.id, sessionId: sessionOne.id }),
+        makeBooking({ id: 'bkg-seat-2', customerId: CUSTOMER_A.id, sessionId: sessionTwo.id }),
+      ],
+    });
+
+    const result = await useBookingStore
+      .getState()
+      .createBooking({ customerId: CUSTOMER_A.id, sessionId: thirdSession.id, source: 'reception' });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toBe('daily_limit_reached');
+  });
+});
+
+describe('promoteFromWaitlist (ADR-024)', () => {
+  it('cancelling a confirmed booking on a full session opens a seat the earliest waitlisted booking can be promoted into', async () => {
+    const session = makeSession({ capacity: 1 });
+    seedCommonStores(session, [CUSTOMER_A, CUSTOMER_B, makeCustomer({ id: 'cus-c', email: 'customer-c@demo.180fitness.app' })]);
+    useBookingStore.setState({
+      bookings: [
+        makeBooking({ id: 'bkg-confirmed', customerId: CUSTOMER_A.id, sessionId: session.id, status: 'confirmed' }),
+        makeBooking({ id: 'bkg-wait-1', customerId: CUSTOMER_B.id, sessionId: session.id, status: 'waitlist', createdAt: '2026-09-17T08:00:00.000-05:00' }),
+        makeBooking({ id: 'bkg-wait-2', customerId: 'cus-c', sessionId: session.id, status: 'waitlist', createdAt: '2026-09-17T08:05:00.000-05:00' }),
+      ],
+    });
+
+    const cancelResult = await useBookingStore.getState().cancelBooking('bkg-confirmed', { override: true });
+    expect(cancelResult.ok).toBe(true);
+
+    const promoteResult = await useBookingStore.getState().promoteFromWaitlist('bkg-wait-1');
+    expect(promoteResult.ok).toBe(true);
+    if (promoteResult.ok) expect(promoteResult.booking.status).toBe('confirmed');
+
+    const bookings = useBookingStore.getState().bookings;
+    expect(bookings.find((b) => b.id === 'bkg-confirmed')?.status).toBe('cancelled');
+    expect(bookings.find((b) => b.id === 'bkg-wait-1')?.status).toBe('confirmed');
+    expect(bookings.find((b) => b.id === 'bkg-wait-2')?.status).toBe('waitlist');
+
+    // Occupancy is derived from the ledger (ADR-006/ADR-008): exactly one confirmed/pending
+    // booking now occupies the capacity-1 session, so a second promotion has nothing to promote
+    // into.
+    const occupied = bookings.filter((b) => b.status === 'confirmed' || b.status === 'pending');
+    expect(occupied).toHaveLength(1);
+
+    const secondPromote = await useBookingStore.getState().promoteFromWaitlist('bkg-wait-2');
+    expect(secondPromote.ok).toBe(false);
+    if (!secondPromote.ok) expect(secondPromote.reason).toBe('session_full');
+  });
+});
+
 describe('createPublicBooking', () => {
   it('resolves the same customer across two calls with the same email; the second is rejected as a duplicate booking', async () => {
     const session = makeSession({ capacity: 10 });
