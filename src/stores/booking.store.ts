@@ -8,9 +8,10 @@ import type { Booking, NewBookingInput, PublicBookingInput } from '@/domain/type
 import {
   selectBookingEligibility,
   selectCancellationEligibility,
-  selectSessionOccupancy,
+  selectPromotionEligibility,
   type BookingRejectionReason,
   type CancellationRejectionReason,
+  type PromotionRejectionReason,
 } from '@/domain/selectors';
 import { bookingRepository } from '@/services/repositories';
 import { serialize } from './mutation-queue';
@@ -29,7 +30,7 @@ export type CancelActionResult = { ok: true } | { ok: false; reason: Cancellatio
 
 export type PromoteActionResult =
   | { ok: true; booking: Booking }
-  | { ok: false; reason: 'not_waitlisted' | 'session_full'; message: string };
+  | { ok: false; reason: PromotionRejectionReason; message: string };
 
 interface BookingState {
   bookings: Booking[];
@@ -328,24 +329,63 @@ export const useBookingStore = create<BookingState>()((set, get) => ({
         if (!session) {
           throw new Error(`promoteFromWaitlist: booking "${bookingId}" references an unknown session`);
         }
+        const customer = useCustomerStore.getState().customers.find((c) => c.id === booking.customerId);
+        if (!customer) {
+          throw new Error(`promoteFromWaitlist: booking "${bookingId}" references an unknown customer "${booking.customerId}"`);
+        }
+
+        const settings = requireSettings();
+        const demoNow = requireDemoNow();
+
+        // ADR-024 point 3: promotion must satisfy the same conditions as creating a confirmed
+        // booking (session exists, not cancelled, not started, a free seat, no other active
+        // booking for this customer/session, within the daily limit) - selectPromotionEligibility
+        // routes through the exact same selectBookingEligibility the create path uses, so the two
+        // rule sets cannot drift apart. Cheap pre-check before touching state, mirroring
+        // createBooking's own two-phase check below.
+        const preCheck = selectPromotionEligibility({
+          bookingId,
+          bookingStatus: booking.status,
+          session,
+          customer,
+          bookings: get().bookings,
+          sessions: useSessionStore.getState().sessions,
+          settings,
+          demoNow,
+        });
+        if (!preCheck.allowed) {
+          return { ok: false, reason: preCheck.reason, message: preCheck.message };
+        }
 
         let result: PromoteActionResult = {
           ok: false,
-          reason: 'not_waitlisted',
-          message: 'This booking is not on the waitlist.',
+          reason: 'session_full',
+          message: 'The spot was taken while your request was processing.',
         };
         set((state) => {
           const current = state.bookings.find((b) => b.id === bookingId);
-          if (!current || current.status !== 'waitlist') {
+          if (!current) {
             result = { ok: false, reason: 'not_waitlisted', message: 'This booking is not on the waitlist.' };
             return state;
           }
-          // Fresh capacity check (docs/04 invariant 5): promotion only mutates the booking to
-          // confirmed if a spot is actually free right now.
-          const bookingsForSession = state.bookings.filter((b) => b.sessionId === session.id);
-          const occupancy = selectSessionOccupancy(session, bookingsForSession);
-          if (occupancy.available <= 0) {
-            result = { ok: false, reason: 'session_full', message: 'This session is full; nothing to promote into.' };
+          const freshSessions = useSessionStore.getState().sessions;
+          const freshSession = freshSessions.find((s) => s.id === booking.sessionId);
+          if (!freshSession) {
+            result = { ok: false, reason: 'session_not_found', message: 'This session could not be found.' };
+            return state;
+          }
+          const freshCheck = selectPromotionEligibility({
+            bookingId,
+            bookingStatus: current.status,
+            session: freshSession,
+            customer,
+            bookings: state.bookings,
+            sessions: freshSessions,
+            settings,
+            demoNow,
+          });
+          if (!freshCheck.allowed) {
+            result = { ok: false, reason: freshCheck.reason, message: freshCheck.message };
             return state;
           }
           const promoted: Booking = { ...current, status: 'confirmed' };

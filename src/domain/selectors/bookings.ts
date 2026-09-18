@@ -215,6 +215,49 @@ export function selectBookingEligibility(params: BookingEligibilityParams): Book
   return { allowed: true };
 }
 
+// ADR-024 point 3: promotion must satisfy the same conditions as creating a confirmed booking -
+// the session exists, is not cancelled, has not started, has a free seat, the customer holds no
+// other active booking for it, and the customer is within maxReservationsPerDay counting seats.
+// This delegates to selectBookingEligibility above rather than re-checking a subset of its rules
+// (originally just capacity), so promotion and creation can never drift apart again.
+export type PromotionRejectionReason = BookingRejectionReason | 'not_waitlisted';
+
+export type PromotionEligibility =
+  | { allowed: true }
+  | { allowed: false; reason: PromotionRejectionReason; message: string };
+
+export interface PromotionEligibilityParams {
+  bookingId: string;
+  bookingStatus: BookingStatus;
+  session: ClassSession;
+  customer: Customer;
+  bookings: Booking[]; // full ledger - bookingId is excluded below before delegating
+  sessions: ClassSession[];
+  settings: StudioSettings;
+  demoNow: ISODateTime;
+}
+
+export function selectPromotionEligibility(params: PromotionEligibilityParams): PromotionEligibility {
+  const { bookingId, bookingStatus, session, customer, bookings, sessions, settings, demoNow } = params;
+
+  if (bookingStatus !== 'waitlist') {
+    return { allowed: false, reason: 'not_waitlisted', message: 'This booking is not on the waitlist.' };
+  }
+
+  // The booking being promoted is excluded from the ledger passed down so it never counts as
+  // "the customer's own active booking for this session" in selectBookingEligibility's
+  // already_booked check below - it is that booking, about to become one.
+  return selectBookingEligibility({
+    session,
+    customer,
+    bookings: bookings.filter((booking) => booking.id !== bookingId),
+    sessions,
+    settings,
+    demoNow,
+    requestedStatus: 'confirmed',
+  });
+}
+
 export type CancellationRejectionReason = 'already_cancelled' | 'outside_cancellation_window';
 
 export type CancellationEligibility =

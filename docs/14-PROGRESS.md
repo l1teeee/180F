@@ -4,9 +4,55 @@ Recovery point after context compaction, restart, agent switch or interrupted se
 
 Last updated: 2026-09-17 (Phase 2A accepted)
 
+# Phase 12 - Final acceptance record
+
+Opus walked master plan section 65 against the running application on 2026-09-18. Every line below is evidence, not assertion: where it says verified, something was executed and its output read.
+
+## Engineering quality
+
+| Item | Evidence |
+|---|---|
+| TypeScript passes | `pnpm typecheck` clean, run by Opus after the final fix round |
+| Lint passes | `pnpm lint` reports zero problems, not merely zero errors |
+| No silenced rules | `grep -rn "eslint-disable" src/ e2e/` returns **0**. The last one, in the calendar, was removed by fixing its dependency array honestly |
+| Unit and component tests pass | **385 of 385**, 24 files |
+| Playwright critical flows pass | **17 passed, 9 skipped by project guard, 0 failed**, stable across repeated runs |
+| Production build passes | `pnpm build` succeeds: 18 routes, static except the three dynamic detail routes |
+| No blocking console errors | Reviewers checked every screen live; the only console line anywhere is a Next.js font-preload notice that does not appear in production |
+| No hydration warnings | None on any route, which the hydration gate of ADR-005 makes structural rather than incidental |
+| Independent review completed | Codex `gpt-6-astra` reviewed the architecture and the foundation with executable probes; a five-lens adversarial panel audited the finished product |
+| Findings resolved or documented | 25 panel findings, all closed. Earlier rounds closed 15 architecture findings, 9 documentation findings and 2 foundation probes |
+
+## Routes
+
+All sixteen respond, verified by request: `/` redirects (307), the fourteen application routes and `/design-system` return 200, an unknown path returns 404. No sidebar link 404s.
+
+## Product behaviour
+
+| Area | Evidence |
+|---|---|
+| Demo login, Supabase optional | Demo credentials work; the app runs identically with and without Supabase environment variables, which are absent here |
+| Dashboard derived from shared state | KPI, weekly chart and the bookings table's Confirmed plus Pending tabs all read 80 for the same day and move together on create and cancel (ADR-023) |
+| One session, six surfaces | A session read 13/15 "Almost full" identically on the dashboard card, the raw ledger counted by hand, calendar week and day views, the session sheet and the instructor's own page |
+| Booking lifecycle | Create, cancel and waitlist promotion each update every counter immediately; overbooking is refused at commit time even under concurrent submission (ADR-017) |
+| Public booking | Full sessions disabled, validation enforced, double submission impossible, confirmation shows the committed booking |
+| Cross-tab persistence | A booking made in one tab appears in another without a reload, through the shared snapshot and storage event (ADR-022) |
+| Automations simulated | No network call exists anywhere in the feature; the simulated nature is labelled on screen |
+| Accessibility | Skip link, heading structure, distinct landmark names, AA contrast on every readable token, 40px tap targets, focus returned on dialog close, charts carry text summaries |
+
+## Deviations from the master plan, all recorded as ADRs
+
+Twenty-four decisions in `/docs/13-DECISIONS.md`. The ones a reader should know about: the booking ledger is fully materialised because 50-80 bookings cannot produce 85 percent occupancy (ADR-007); volatile counters live on view models rather than entities (ADR-006); the dashboard's Active members reads 132 rather than the master plan's illustrative 148, so it agrees with the customers page (ADR-016); demo state persists and syncs across tabs rather than resetting on reload, because the demo's climax depends on it (ADR-022).
+
+## One process deviation
+
+The master plan assigns the final technical audit to Codex. Codex exhausted its usage quota twice during the build, so the pre-convergence audit was performed by a five-lens adversarial panel of Claude agents instead, and the Codex audit was run afterwards when its quota returned. This is recorded because a reviewer auditing work produced by the same model family is less independent than the plan intends.
+
+---
+
 # Current phase
 
-**Phase 11 - Polish**, three Sonnet agents in parallel on disjoint areas (operational core; catalogue and configuration; public booking plus shell). Last updated 2026-09-18, about 01:40.
+**Phase 12 - Convergence.** All build phases are complete and committed. One fix round is running to close two lifecycle defects that the Codex final audit reproduced: customer identity reuse after a reload, and waitlist promotion checking capacity but not the remaining eligibility rules. Last updated 2026-09-18, about 09:00.
 
 ## Phase status
 
@@ -20,23 +66,26 @@ Last updated: 2026-09-17 (Phase 2A accepted)
 | Fix round 1 - dialog centring, mobile bottom sheet, shared follow-ups | done | d0da296 |
 | 10 Tests - seven Playwright flows, unit gaps | done | a434d68 |
 | Fix round 2 - persistence across tabs, one definition of today's bookings, calendar hour, public booking hardening | done | f9d35df |
-| 11 Polish | running | |
-| Final review and 12 Convergence | pending | |
+| 11 Polish | done | 32c0414 |
+| Final review panel, 25 findings, all closed | done | 5477287 |
+| Codex final audit and 12 Convergence | in progress | |
 
-## Latest verification (after fix round 2, run by Opus)
+## Latest verification (after the final review fixes, run by Opus)
 
 | Gate | Result |
 |---|---|
 | `pnpm typecheck` | clean |
 | `pnpm lint` | zero problems |
-| `pnpm test` | 368 of 368 |
+| `pnpm test` | 385 of 385 |
 | `pnpm test:e2e` | 17 passed, 9 skipped by project guard, 0 failed |
+| `pnpm build` | passes, 18 routes |
+| `grep -rn "eslint-disable" src/ e2e/` | 0 |
 
 ## Next exact action
 
-1. When polish lands: run the full gate including e2e, commit, push.
-2. Final review. Codex's quota resets at 04:45; if it is not back, run an adversarial review panel of Sonnet agents across correctness, cross-screen consistency, accessibility and demo-readiness.
-3. Apply confirmed findings, then Phase 12: walk master plan section 65's acceptance checklist item by item against the running app.
+1. Verify the lifecycle fix round: identity cannot be reused after a reload or across tabs, and promotion honours every eligibility rule. Run the full gate including e2e and the production build.
+2. Commit, push, and reconcile this file.
+3. Declare Phase 12 complete only if no critical or high finding remains open (master plan 66.15).
 
 # Interruption on 2026-09-17, about 22:40
 

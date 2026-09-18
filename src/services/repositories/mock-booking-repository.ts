@@ -1,37 +1,13 @@
 import type { Booking, ISODateTime, NewBookingInput } from '@/domain/types';
+import { createLiveIdSequence } from './live-id-sequence';
 import { simulateLatency } from './latency';
 import { getLastLoadedSnapshot } from './mock-demo-dataset';
 import type { BookingRepository } from './types';
 
-// Runtime-created bookings use `bkg-live-<n>` (docs/04-DOMAIN-MODEL.md section 6). The sequence
-// number is kept in localStorage, not a plain module-level counter: the strongest way to present
-// this demo (ADR-022) runs the admin dialog and the public flow in two separate browser tabs,
-// each loading its own copy of this module. A private in-memory counter starts at 0 in every
-// tab, so each tab's first booking mints the same `bkg-live-1`; once ADR-022's cross-tab sync
-// merges both tabs' bookings into one array, React renders two rows sharing that key. Reading and
-// writing one shared sequence in localStorage - the same mechanism ADR-022 already uses to keep
-// the ledger itself in sync - gives every entry point, in every tab, a single source of ids
-// instead of one counter each. The number itself carries no meaning beyond uniqueness, so it is
-// never reset: a new day or a mid-day "Reset demo data" both just resume from a higher number,
-// never risk two bookings sharing an id.
-const LIVE_BOOKING_SEQUENCE_KEY = '180f.demo.v1.liveBookingSeq';
-
-let fallbackCounter = 0;
-
-function nextLiveBookingId(): number {
-  try {
-    const stored = Number(localStorage.getItem(LIVE_BOOKING_SEQUENCE_KEY));
-    const next = (Number.isFinite(stored) && stored > 0 ? stored : 0) + 1;
-    localStorage.setItem(LIVE_BOOKING_SEQUENCE_KEY, String(next));
-    return next;
-  } catch {
-    // Storage unavailable (private mode, quota, a non-browser test context): fall back to a
-    // counter that is at least unique within this module instance, same fail-soft posture as
-    // demo-persistence.ts's own localStorage access.
-    fallbackCounter += 1;
-    return fallbackCounter;
-  }
-}
+// Runtime-created bookings use `bkg-live-<n>` (docs/04-DOMAIN-MODEL.md section 6). See
+// live-id-sequence.ts for why the sequence lives in localStorage rather than a plain
+// module-level counter.
+const nextLiveBookingId = createLiveIdSequence('180f.demo.v1.liveBookingSeq');
 
 export const mockBookingRepository: BookingRepository = {
   async list() {

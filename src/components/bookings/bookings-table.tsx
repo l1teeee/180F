@@ -3,6 +3,7 @@
 // docs/06-ROUTES-AND-SCREENS.md section 3.4: "Table columns: Customer, Class, Instructor, Date,
 // Time, Source, Status." Built on the shared DataTable (pagination + the below-md card list come
 // from there, docs/07-COMPONENT-ARCHITECTURE.md section 4) - this file only supplies columns.
+import { useMemo } from 'react';
 import { X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,20 +12,64 @@ import { DataTable, type DataTableColumn } from '@/components/shared/data-table'
 import { EmptyState } from '@/components/shared/empty-state';
 import { SourceBadge } from '@/components/shared/source-badge';
 import { StatusBadge } from '@/components/shared/status-badge';
+import { selectPromotionEligibility, type PromotionEligibility } from '@/domain/selectors';
 import type { BookingRow } from '@/domain/types';
 import { formatDisplayDateShort, formatDisplayTime } from '@/lib/dates';
+import { useBookingStore } from '@/stores/booking.store';
+import { useDemoRuntimeStore } from '@/stores/demo-runtime.store';
+import { useSessionStore } from '@/stores/session.store';
+import { useSettingsStore } from '@/stores/settings.store';
 
 export interface BookingsTableProps {
   rows: BookingRow[];
   onCancelRequest: (row: BookingRow) => void;
   onCreateBooking: () => void;
   onPromoteRequest: (row: BookingRow) => void;
-  // Sessions that currently have a free seat (docs/domain/selectors/sessions.ts's `available` >
-  // 0) - the only sessions a waitlist row may be promoted into (ADR-024).
+  // Superseded by usePromotionEligibilityByRow below (ADR-024 point 3: promotion must satisfy
+  // the same conditions as creating a confirmed booking, not capacity alone) - kept in the props
+  // contract unread so this file's caller does not have to change.
   promotableSessionIds: ReadonlySet<string>;
   // The booking id currently mid-promotion, so its row's control shows it is busy and cannot be
   // double-clicked (docs/08 section 8.1 style, mirrored at the row level for this action).
   promotingId: string | null;
+}
+
+const DEFAULT_PROMOTE_TITLE = 'This booking cannot be promoted yet.';
+
+// A waitlisted row may be promoted only while it would also be accepted as a brand-new confirmed
+// booking (ADR-024 point 3) - session not cancelled or started, a free seat, no other active
+// booking for this customer/session, within the daily limit. Reads the stores directly (rather
+// than taking the ledger/settings/clock as props) so this is the one place, alongside
+// promoteFromWaitlist itself, that computes it - both call the same selectPromotionEligibility,
+// so a disabled button and a rejected click can never disagree (mirrors the existing contract
+// documented on selectBookingEligibility for booking creation).
+function usePromotionEligibilityByRow(rows: BookingRow[]): Map<string, PromotionEligibility> {
+  const bookings = useBookingStore((state) => state.bookings);
+  const sessions = useSessionStore((state) => state.sessions);
+  const settings = useSettingsStore((state) => state.settings);
+  const demoNow = useDemoRuntimeStore((state) => state.demoNow);
+
+  return useMemo(() => {
+    const eligibilityByBookingId = new Map<string, PromotionEligibility>();
+    if (!settings || !demoNow) return eligibilityByBookingId;
+    for (const row of rows) {
+      if (row.status !== 'waitlist') continue;
+      eligibilityByBookingId.set(
+        row.id,
+        selectPromotionEligibility({
+          bookingId: row.id,
+          bookingStatus: row.status,
+          session: row.session,
+          customer: row.customer,
+          bookings,
+          sessions,
+          settings,
+          demoNow,
+        }),
+      );
+    }
+    return eligibilityByBookingId;
+  }, [rows, bookings, sessions, settings, demoNow]);
 }
 
 const BASE_COLUMNS: DataTableColumn<BookingRow>[] = [
@@ -48,20 +93,21 @@ const BASE_COLUMNS: DataTableColumn<BookingRow>[] = [
 interface PromoteButtonProps {
   row: BookingRow;
   canPromote: boolean;
+  title: string;
   promoting: boolean;
   onPromoteRequest: (row: BookingRow) => void;
 }
 
-// A waitlisted booking can be promoted only while its session actually has a free seat
-// (ADR-024) - disabled otherwise, with `title` stating why, per ADR-024 point 2: a control that
-// can be refused must either explain itself disabled or accept the click and report the outcome.
-function PromoteButton({ row, canPromote, promoting, onPromoteRequest }: PromoteButtonProps) {
+// Disabled whenever selectPromotionEligibility refuses it, with `title` stating why (ADR-024
+// point 2: a control that can be refused must either explain itself disabled or accept the click
+// and report the outcome) - not capacity alone.
+function PromoteButton({ row, canPromote, title, promoting, onPromoteRequest }: PromoteButtonProps) {
   return (
     <Button
       type="button"
       variant="secondary"
       disabled={!canPromote || promoting}
-      title={canPromote ? 'Promote to confirmed' : 'No open seat in this session yet'}
+      title={title}
       onClick={(event) => {
         event.stopPropagation();
         onPromoteRequest(row);
@@ -79,12 +125,14 @@ function PromoteButton({ row, canPromote, promoting, onPromoteRequest }: Promote
 function BookingMobileCard({
   row,
   canPromote,
+  promoteTitle,
   promoting,
   onCancelRequest,
   onPromoteRequest,
 }: {
   row: BookingRow;
   canPromote: boolean;
+  promoteTitle: string;
   promoting: boolean;
   onCancelRequest: (row: BookingRow) => void;
   onPromoteRequest: (row: BookingRow) => void;
@@ -113,7 +161,13 @@ function BookingMobileCard({
         <SourceBadge source={row.source} />
         <div className="flex items-center gap-2">
           {row.status === 'waitlist' ? (
-            <PromoteButton row={row} canPromote={canPromote} promoting={promoting} onPromoteRequest={onPromoteRequest} />
+            <PromoteButton
+              row={row}
+              canPromote={canPromote}
+              title={promoteTitle}
+              promoting={promoting}
+              onPromoteRequest={onPromoteRequest}
+            />
           ) : null}
           {row.status !== 'cancelled' ? (
             <Button
@@ -139,10 +193,17 @@ export function BookingsTable({
   onCancelRequest,
   onCreateBooking,
   onPromoteRequest,
-  promotableSessionIds,
   promotingId,
 }: BookingsTableProps) {
-  // Status and actions stay out of BASE_COLUMNS above because both need promotableSessionIds -
+  const eligibilityByBookingId = usePromotionEligibilityByRow(rows);
+  const canPromoteRow = (row: BookingRow) => eligibilityByBookingId.get(row.id)?.allowed === true;
+  const promoteTitleFor = (row: BookingRow) => {
+    const eligibility = eligibilityByBookingId.get(row.id);
+    if (!eligibility) return DEFAULT_PROMOTE_TITLE;
+    return eligibility.allowed ? 'Promote to confirmed' : eligibility.message;
+  };
+
+  // Status and actions stay out of BASE_COLUMNS above because both need per-row eligibility -
   // the "Seat open" signal (status cell) and the Promote control's enabled state (actions cell)
   // are the same fact, read once per row.
   const columns: DataTableColumn<BookingRow>[] = [
@@ -151,7 +212,7 @@ export function BookingsTable({
       id: 'status',
       header: 'Status',
       cell: (row) => {
-        const canPromote = row.status === 'waitlist' && promotableSessionIds.has(row.session.id);
+        const canPromote = row.status === 'waitlist' && canPromoteRow(row);
         return (
           <div className="flex items-center gap-1.5">
             <StatusBadge status={row.status} />
@@ -166,12 +227,18 @@ export function BookingsTable({
       className: 'text-right',
       cell: (row) => {
         if (row.status === 'cancelled') return null;
-        const canPromote = row.status === 'waitlist' && promotableSessionIds.has(row.session.id);
+        const canPromote = row.status === 'waitlist' && canPromoteRow(row);
         const promoting = promotingId === row.id;
         return (
           <div className="flex items-center justify-end gap-2">
             {row.status === 'waitlist' ? (
-              <PromoteButton row={row} canPromote={canPromote} promoting={promoting} onPromoteRequest={onPromoteRequest} />
+              <PromoteButton
+                row={row}
+                canPromote={canPromote}
+                title={promoteTitleFor(row)}
+                promoting={promoting}
+                onPromoteRequest={onPromoteRequest}
+              />
             ) : null}
             <Button
               type="button"
@@ -198,7 +265,8 @@ export function BookingsTable({
       renderMobileCard={(row) => (
         <BookingMobileCard
           row={row}
-          canPromote={row.status === 'waitlist' && promotableSessionIds.has(row.session.id)}
+          canPromote={row.status === 'waitlist' && canPromoteRow(row)}
+          promoteTitle={promoteTitleFor(row)}
           promoting={promotingId === row.id}
           onCancelRequest={onCancelRequest}
           onPromoteRequest={onPromoteRequest}

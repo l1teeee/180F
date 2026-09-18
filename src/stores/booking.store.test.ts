@@ -2,7 +2,7 @@
 // section 7. Store tests seed the OTHER stores this one reads via getState() directly through
 // their own setState, matching the makeX-with-overrides fixture convention already used in
 // src/domain/selectors/*.test.ts, rather than routing through the full buildDemoDataset seed.
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Booking, ClassSession, Customer, StudioSettings } from '@/domain/types';
 import { useBookingStore } from './booking.store';
 import { useCustomerStore } from './customer.store';
@@ -297,6 +297,77 @@ describe('promoteFromWaitlist (ADR-024)', () => {
     expect(secondPromote.ok).toBe(false);
     if (!secondPromote.ok) expect(secondPromote.reason).toBe('session_full');
   });
+
+  // Independent audit defect 2: promotion previously re-checked capacity only. These reproduce
+  // the reviewer's scenario ("accepted a third seat with a two-seat daily limit, plus entries
+  // for past and cancelled sessions") one rule at a time, routed through the same
+  // selectPromotionEligibility/selectBookingEligibility the create path uses.
+  it('refuses promotion when it would push the customer over the daily reservation limit', async () => {
+    const targetSession = makeSession({ id: 'ses-target', capacity: 2 });
+    const sessionOne = makeSession({ id: 'ses-1', startTime: '06:00', endTime: '06:50' });
+    const sessionTwo = makeSession({ id: 'ses-2', startTime: '07:00', endTime: '07:50' });
+    useSessionStore.setState({ sessions: [targetSession, sessionOne, sessionTwo] });
+    useCustomerStore.setState({ customers: [CUSTOMER_A, CUSTOMER_B] });
+    useSettingsStore.setState({ settings: makeSettings({ maxReservationsPerDay: 2 }) });
+    useDemoRuntimeStore.setState({ status: 'ready', demoToday: DEMO_TODAY, demoNow: DEMO_NOW, error: null });
+    useBookingStore.setState({
+      bookings: [
+        // Customer A already holds two seats today (the daily limit) on other sessions - the
+        // target session itself has a free seat, so capacity alone would wrongly allow this.
+        makeBooking({ id: 'bkg-seat-1', customerId: CUSTOMER_A.id, sessionId: sessionOne.id }),
+        makeBooking({ id: 'bkg-seat-2', customerId: CUSTOMER_A.id, sessionId: sessionTwo.id }),
+        makeBooking({ id: 'bkg-wait', customerId: CUSTOMER_A.id, sessionId: targetSession.id, status: 'waitlist' }),
+      ],
+    });
+
+    const result = await useBookingStore.getState().promoteFromWaitlist('bkg-wait');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toBe('daily_limit_reached');
+    expect(useBookingStore.getState().bookings.find((b) => b.id === 'bkg-wait')?.status).toBe('waitlist');
+  });
+
+  it('refuses promotion when the session has already started', async () => {
+    // DEMO_NOW is 09:00; a 08:00 start on the same day is already in the past.
+    const session = makeSession({ capacity: 2, date: DEMO_TODAY, startTime: '08:00', endTime: '08:50' });
+    seedCommonStores(session);
+    useBookingStore.setState({
+      bookings: [makeBooking({ id: 'bkg-wait', customerId: CUSTOMER_B.id, sessionId: session.id, status: 'waitlist' })],
+    });
+
+    const result = await useBookingStore.getState().promoteFromWaitlist('bkg-wait');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toBe('session_started');
+    expect(useBookingStore.getState().bookings.find((b) => b.id === 'bkg-wait')?.status).toBe('waitlist');
+  });
+
+  it('refuses promotion when the session has been cancelled', async () => {
+    const session = makeSession({ capacity: 2, status: 'cancelled' });
+    seedCommonStores(session);
+    useBookingStore.setState({
+      bookings: [makeBooking({ id: 'bkg-wait', customerId: CUSTOMER_B.id, sessionId: session.id, status: 'waitlist' })],
+    });
+
+    const result = await useBookingStore.getState().promoteFromWaitlist('bkg-wait');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toBe('session_cancelled');
+    expect(useBookingStore.getState().bookings.find((b) => b.id === 'bkg-wait')?.status).toBe('waitlist');
+  });
+
+  it('refuses promotion when the booking is not on the waitlist', async () => {
+    const session = makeSession({ capacity: 2 });
+    seedCommonStores(session);
+    useBookingStore.setState({
+      bookings: [makeBooking({ id: 'bkg-confirmed', customerId: CUSTOMER_A.id, sessionId: session.id, status: 'confirmed' })],
+    });
+
+    const result = await useBookingStore.getState().promoteFromWaitlist('bkg-confirmed');
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toBe('not_waitlisted');
+  });
 });
 
 describe('createPublicBooking', () => {
@@ -341,5 +412,82 @@ describe('createPublicBooking', () => {
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.reason).toBe('session_full');
     expect(useCustomerStore.getState().customers.some((c) => c.email === 'new-public@example.com')).toBe(false);
+  });
+});
+
+// Independent audit defect 1, reproduced end-to-end through the public flow: "After reload,
+// Bob's booking used Alice's persisted customer ID, and Bob was never added." Uses the same
+// vi.resetModules() technique as mock-booking-repository.test.ts and
+// mock-customer-repository.test.ts - only localStorage, not module state, survives that reset,
+// the same reset a real browser tab gets simply by being a separate page load. Every store this
+// scenario touches is re-imported fresh alongside the booking store so they resolve to the same
+// module-registry instances booking.store.ts itself calls internally.
+describe('customer identity survives a reload across the public flow (independent audit defect 1)', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("does not let a second public customer's booking use a first, different customer's persisted id after a simulated reload", async () => {
+    vi.resetModules();
+    const tab1Booking = await import('./booking.store');
+    const tab1Customer = await import('./customer.store');
+    const tab1Session = await import('./session.store');
+    const tab1Settings = await import('./settings.store');
+    const tab1Runtime = await import('./demo-runtime.store');
+
+    const session = makeSession({ capacity: 10 });
+    tab1Session.useSessionStore.setState({ sessions: [session] });
+    tab1Settings.useSettingsStore.setState({ settings: makeSettings() });
+    tab1Runtime.useDemoRuntimeStore.setState({ status: 'ready', demoToday: DEMO_TODAY, demoNow: DEMO_NOW, error: null });
+
+    const aliceResult = await tab1Booking.useBookingStore.getState().createPublicBooking({
+      sessionId: session.id,
+      name: 'Alice',
+      email: 'alice@example.com',
+      phone: '+57 300 000 0001',
+    });
+    expect(aliceResult.ok).toBe(true);
+    if (!aliceResult.ok) throw new Error('setup failed: Alice\'s booking was rejected');
+    const alice = tab1Customer.useCustomerStore.getState().customers[0];
+    expect(alice?.name).toBe('Alice');
+    const aliceBooking = aliceResult.booking;
+
+    // Simulated reload / second tab: every module re-evaluates fresh - a private in-memory id
+    // counter would restart at zero here - but localStorage (where the id-sequence fix keeps its
+    // state, and where ADR-022 keeps the demo snapshot) survives. setState below stands in for
+    // hydrateDemo() restoring Alice's customer and booking from that snapshot into the
+    // otherwise-empty fresh stores.
+    vi.resetModules();
+    const tab2Booking = await import('./booking.store');
+    const tab2Customer = await import('./customer.store');
+    const tab2Session = await import('./session.store');
+    const tab2Settings = await import('./settings.store');
+    const tab2Runtime = await import('./demo-runtime.store');
+
+    tab2Session.useSessionStore.setState({ sessions: [session] });
+    tab2Settings.useSettingsStore.setState({ settings: makeSettings() });
+    tab2Runtime.useDemoRuntimeStore.setState({ status: 'ready', demoToday: DEMO_TODAY, demoNow: DEMO_NOW, error: null });
+    tab2Customer.useCustomerStore.setState({ customers: [alice as NonNullable<typeof alice>] });
+    tab2Booking.useBookingStore.setState({ bookings: [aliceBooking] });
+
+    const bobResult = await tab2Booking.useBookingStore.getState().createPublicBooking({
+      sessionId: session.id,
+      name: 'Bob',
+      email: 'bob@example.com',
+      phone: '+57 300 000 0002',
+    });
+
+    expect(bobResult.ok).toBe(true);
+    const customersAfter = tab2Customer.useCustomerStore.getState().customers;
+    expect(customersAfter).toHaveLength(2); // Bob was added, not silently dropped.
+    const bob = customersAfter.find((c) => c.email === 'bob@example.com');
+    expect(bob).toBeDefined();
+    expect(bob?.id).not.toBe(alice?.id);
+
+    // The reviewer's exact failure: each booking must point at its own customer, not the other's.
+    if (bobResult.ok) expect(bobResult.booking.customerId).toBe(bob?.id);
+    const bookingsAfter = tab2Booking.useBookingStore.getState().bookings;
+    expect(bookingsAfter.find((b) => b.customerId === alice?.id)).toBeDefined();
+    expect(bookingsAfter.find((b) => b.customerId === bob?.id)).toBeDefined();
   });
 });
