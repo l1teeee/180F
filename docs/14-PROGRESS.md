@@ -6,26 +6,45 @@ Last updated: 2026-09-17 (Phase 2A accepted)
 
 # Current phase
 
-**Phase 2 — Foundation**. 2A accepted. 2B (domain, data, selectors) and 2C (stores, services, hooks) delegated to Sonnet 5 at maximum reasoning effort and running.
+**Phase 2 complete except 2D.** Foundation committed as checkpoint 6fd3493. Execution switched to an aggressive parallel plan at the client's request: target is about 4 hours of wall clock instead of 11 sequential.
+
+## Parallel execution plan
+
+| Step | Agents | Owns |
+|---|---|---|
+| running | focus ring fix + motion system | src/app/globals.css, src/app/design-system/** |
+| 1 | shadcn primitives, restyled | components.json, src/components/ui/** |
+| 2 | app shell + shared components, and public booking, in parallel | src/components/{layout,shared}/**, admin routes, login; and src/app/book/**, src/components/booking/** |
+| 3 | six feature agents in parallel | dashboard; calendar+bookings; customers; classes+instructors; memberships+automations; settings+login polish |
+| 4 | three Codex reviews in parallel + Opus integration | read-only |
+| 5 | fix agents in parallel | their own feature paths |
+| 6 | Playwright tests and polish | e2e/**, then cross-cutting polish |
+| 7 | Codex final audit + Opus convergence | read-only |
+
+Concurrency safety is disjoint path ownership plus a git checkpoint before each fan-out, so a single agent straying can be reverted per path rather than rebuilt. Worktrees were considered and rejected: seven node_modules, seven ports and seven merges cost more than they save at this scale.
 
 # Completed
 
-- **Phase 0 — Repository inspection (Opus).** Greenfield confirmed: the repository held only `GYM_DEMO_MASTER_PLAN.md`, with no git history. `git init -b main` executed; zero commits. Toolchain verified: Node v24.11.1, pnpm 11.5.1, git 2.52.0, Codex CLI 0.154.0 on `gpt-6-astra` with reasoning effort max. No Supabase environment variables present, so Demo Auth is the default path.
-- **Phase 1 — Architecture and documentation (Opus).** Stack pinned after peer-dependency verification of every package against React 19; domain contract fixed; state architecture, selector set and hook set defined; design system encoded from the client's reference frames; phase plan, ownership map and sixteen ADRs written. All 16 /docs files, CLAUDE.md and README.md exist. A consistency audit of the whole set produced nine findings (one critical, two high, four medium, two low); all nine are resolved, the critical one via ADR-016.
-- **Phase 2A — Bootstrap, design tokens, design-system preview (Sonnet 5). ACCEPTED by Opus.** Next 16.3.5 / React 19.2.8 / TypeScript 5.9.3 / Tailwind 4.3.3 installed with zero peer errors; the full token set from docs/03 lives in `src/app/globals.css`; Manrope wired; `/design-system` renders all ten sections of the visual language.
+- **Phase 0 and 1 (Opus).** 17 documents, 20 ADRs, domain contract, state architecture, design system from the client reference frames, phase plan, ownership map. A cross-document audit produced nine findings, all resolved.
+- **Phase 2A (Sonnet). ACCEPTED.** Next 16.3.5 / React 19.2.8 / TypeScript 5.9.3 / Tailwind 4.3.3, zero peer errors. Tokens in globals.css. /design-system renders the visual language.
+- **Design system overlays (Sonnet). ACCEPTED.** Six overlay patterns - form dialog, destructive confirm, side sheet, bottom sheet, command palette, message preview - each as a static specimen and a live native <dialog>. Verified by driving Chrome: focus order, inert specimens, sheet geometry, Esc and focus return. Two real bugs found and fixed during that verification.
+- **Phase 2B (Sonnet). ACCEPTED.** Types, constants, Zod schemas, the deterministic dataset and the pure selector layer.
+- **Phase 2C (Sonnet). ACCEPTED.** Repositories, ten Zustand stores, the auth strategy, hooks, and the ADR-017 serialized mutation queue.
+- **Phase 2 remediation (Sonnet). ACCEPTED.** All fifteen Codex findings applied. **221 tests green**, up from 90.
 
-# In progress
+## Dataset, verified across all seven weekday anchors
 
-| Work | Owner | Files | State |
-|---|---|---|---|
-| Phase 2B — domain types, constants, schemas, seeded dataset, selectors, invariant tests | Sonnet 5 (ultracode) | `src/domain/**`, `src/data/**`, `src/lib/{random,dates,format}.ts`, `vitest.config.ts` | running |
-| Phase 2C — repositories, ten Zustand stores, auth abstraction, hooks | Sonnet 5 (ultracode) | `src/services/**`, `src/stores/**`, `src/hooks/**`, `src/lib/env.ts` | queued behind 2B |
+| demoToday | sessions | bookings | occupancy | full in next 3 days | almost full | active customers |
+|---|---|---|---|---|---|---|
+| Mon 2026-09-14 | 76 | 1176 | 0.8408 | 4 | 20 | 132 |
+| Tue 2026-09-15 | 76 | 1172 | 0.8406 | 4 | 23 | 132 |
+| Wed 2026-09-16 | 76 | 1177 | 0.8427 | 4 | 22 | 132 |
+| Thu 2026-09-17 | 76 | 1177 | 0.8398 | 4 | 20 | 132 |
+| Fri 2026-09-18 | 76 | 1170 | 0.8414 | 4 | 20 | 132 |
+| Sat 2026-09-19 | 76 | 1170 | 0.8414 | 4 | 21 | 132 |
+| Sun 2026-09-20 | 76 | 1171 | 0.8384 | 4 | 18 | 132 |
 
-# Pending
-
-- Phase 2D — shadcn primitives restyled, app shell, shared components, admin route placeholders.
-- Codex `gpt-6-astra` review of Phase 2, then Opus acceptance.
-- Phases 3 to 12 per `/docs/10-IMPLEMENTATION-PLAN.md`.
+Exactly four full sessions on every anchor confirms the deterministic narrative pass is doing the guaranteeing, not the statistical pass getting lucky - which was Codex finding H1.
 
 # Codex architecture verification (gpt-6-astra, read-only, before the state layer was built)
 
