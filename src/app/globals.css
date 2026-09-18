@@ -198,6 +198,15 @@
  */
 @layer components {
   .overlay-surface {
+    /*
+     * Tailwind v4 preflight sets `margin: 0` on every element, which overrides the UA rule
+     * `dialog:modal { margin: auto }` that centres a native <dialog> - without this, every
+     * overlay that relies on the platform's own centring (sm/md/lg, the motion specimen, and
+     * the command palette's horizontal axis) collapses into the top-left corner instead. The
+     * sheet and bottom sheet variants below still win this on specificity with their own
+     * `m-0`/inset utilities, so this one declaration is safe for every pattern.
+     */
+    margin: auto;
     opacity: 0;
     transition:
       opacity 150ms cubic-bezier(0.22, 1, 0.36, 1),
