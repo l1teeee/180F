@@ -18,8 +18,11 @@ dev server is already up on `http://localhost:3000` (the usual case during activ
 Playwright attaches to it instead of starting a second one; otherwise it starts one itself.
 
 Two projects run every spec: `chromium-desktop` (1440x900) and `mobile` (390x844). A spec that
-is meant for only one viewport should say so with `test.skip(({ isMobile }) => ..., reason)` —
-see the note at the top of `05-public-booking.spec.ts` / `06-public-booking-mobile.spec.ts`.
+is meant for only one viewport says so with `test.skip(({ isMobile }) => ..., reason)` — see the
+note at the top of `05-public-booking.spec.ts` / `06-public-booking-mobile.spec.ts` (the public
+booking flow itself) and `02-new-booking.spec.ts` / `04-customer-detail.spec.ts` (desktop-only:
+the admin sidebar and `DataTable`'s `<table>` are both hidden below their own breakpoints, per
+each file's own header comment).
 
 ## The hydration fixture — why it exists and how it works
 
@@ -40,28 +43,14 @@ in an app built this way.
 - `waitForDemoReady(page)` is exported separately for the case a navigation happens client-side
   (a sidebar link click, a redirect) rather than through `page.goto`.
 
-### Required DOM signal — not yet implemented, needed for Phase 10
+### The DOM signal
 
-**`e2e/fixtures/hydration.ts` currently has nothing to wait for.** As of this harness, nothing
-in `src/` writes a `data-demo-status` attribute anywhere. This is the one concrete requirement
-this phase is handing to whoever builds `DemoDataProvider`
-(`docs/08-STATE-MANAGEMENT.md` sections 3 and 8.4, a client component under `components/layout/`):
-
-```text
-Mirror useDemoRuntimeStore.status onto the DOM as it changes, client-side only:
-
-  <body data-demo-status="idle" | "loading" | "ready" | "error">
-```
-
-A plain effect that runs `document.body.dataset.demoStatus = status` whenever the store's
-`status` changes is enough. It must never be part of the initial server-rendered markup — ADR-005's whole point is that no data-derived HTML exists on the server — so this is a `useEffect`
-inside a client component, not a prop threaded into `RootLayout`.
-
-Until that attribute exists, any spec that actually calls `waitForDemoReady` (directly, or via
-the hydration-aware `page` fixture, or via the auth fixture which is built on top of it) will
-time out after 15s with an error message naming this exact requirement. `07-admin-nav-smoke.spec.ts`
-is the only spec that runs today, and it does not depend on this signal for that reason — see
-its own header comment.
+`src/components/layout/demo-data-provider.tsx` mirrors `useDemoRuntimeStore.status` onto
+`<body data-demo-status="idle" | "loading" | "ready" | "error">` from a client-only effect (never
+part of the initial server-rendered markup, per ADR-005), so `waitForDemoReady` above has a real
+signal to wait on. If that attribute is ever removed, any spec that calls `waitForDemoReady`
+(directly, via the hydration-aware `page` fixture, or via the auth fixture built on top of it)
+will time out after 15s with an error message naming this exact requirement.
 
 ## The auth fixture
 
@@ -99,39 +88,56 @@ update the locator there, not in the specs that use it.
 | `customers.page.ts` | `/customers` table |
 | `customer-detail.page.ts` | `/customers/[id]` |
 | `public-booking-wizard.page.ts` | `/book`, the public booking wizard |
+| `stat-card.ts` | Shared reader for `StatCard` (dashboard/customers/customer-detail KPI cards) — the component has no ARIA role of its own, see its own header comment for how this locates and reads one anyway |
+
+Several real components differ from the master-plan copy or roles the page objects were first
+sketched against (verified against live a11y snapshots, not assumed): `StatCard` renders no
+`role="group"`, `SectionCard` titles are plain text with no `role="region"`, FullCalendar's
+events carry no ARIA role at all, and the admin `BookingDialogPage`'s "Instructor" field is a
+derived, read-only fact rather than a `<select>`. Each affected locator's own comment explains
+the real markup and the workaround; new locators should keep doing the same (a live snapshot,
+not a guess) before trusting an assumed role or name.
 
 ## Specs
 
-`07-admin-nav-smoke.spec.ts` is the one spec that runs today. It probes for `/login`; if it's a
-404 or has no email field, or sign-in doesn't reach `/dashboard`, the test calls `test.skip()`
-with the specific reason and stops — it never fails the suite over unfinished UI. Once login and
-the sidebar exist, the same test walks every route in `ADMIN_ROUTES` and fails if any response is
-404/500 or any route logs a console error.
-
-`01` through `06` are placeholders: a `describe` block per flow from `docs/11-TEST-PLAN.md`
-section 4, and a `test.fixme(...)` per assertion with the exact steps written as comments.
-`test.fixme` is reported as "fixme" (not run, not counted as a failure) until Phase 10 removes
-the `.fixme` and fills in the body using the page objects named in each file's header comment.
+All seven specs are real and pass on `pnpm test:e2e` (13 tests run, 5 intentionally skipped —
+see the viewport note above; `pnpm exec playwright show-report` after a run for the full detail).
 
 | Spec | Flow |
 |---|---|
-| `01-login-to-dashboard.spec.ts` | Demo login -> Dashboard |
-| `02-new-booking.spec.ts` | Dashboard -> New Booking -> Create -> Booking appears everywhere it should (ADR-006) |
-| `03-calendar-capacity.spec.ts` | Calendar session sheet capacity matches the class detail page |
-| `04-customer-detail.spec.ts` | Customers -> Customer detail, no console error |
+| `01-login-to-dashboard.spec.ts` | Demo login -> Dashboard; wrong credentials stay on `/login` with a visible error |
+| `02-new-booking.spec.ts` | Dashboard -> New Booking -> Create -> Booking appears everywhere it should (ADR-006). Desktop only |
+| `03-calendar-capacity.spec.ts` | Calendar (week/month/day) -> open a session -> its sheet's capacity matches the same event's own calendar figure |
+| `04-customer-detail.spec.ts` | Customers -> Customer detail, no console error. Desktop only |
 | `05-public-booking.spec.ts` | Public booking wizard, desktop |
-| `06-public-booking-mobile.spec.ts` | Public booking wizard, mobile (390x844), layout-only assertions |
-| `07-admin-nav-smoke.spec.ts` | Navigation smoke test (runs today) |
+| `06-public-booking-mobile.spec.ts` | Public booking wizard, mobile (390x844): a full session is disabled, and a rapid double-submit still lands on exactly one confirmation screen |
+| `07-admin-nav-smoke.spec.ts` | Every sidebar route loads with no console error and no 404/500 |
 
-## What Phase 10 still has to do
+`02-new-booking.spec.ts` navigates via real sidebar link clicks (`AppShellPage.goTo`), never
+`page.goto()`, once it has mutated state: the demo dataset lives only in memory
+(ADR-005 "data resets on reload"), and `page.goto()` is a real browser navigation that would
+silently regenerate a fresh dataset and erase the very booking the test just created.
 
-1. Ask the UI agents for the `data-demo-status` attribute above (or confirm it already landed).
-2. Fill in `01`-`06`: remove `.fixme`, use the page objects, replace the comment steps with real
-   `expect(...)` calls.
-3. Adjust any locator in `e2e/pages/*.ts` whose real accessible name ends up differing from the
-   master-plan copy it was built from — the header comment on each file says which section to
-   re-check.
-4. Add the desktop/mobile `test.skip(({ isMobile }) => ...)` guards noted in `05` and `06` so
-   they don't duplicate each other across the two projects.
-5. Record the `pnpm test:e2e` pass/fail summary in `docs/14-PROGRESS.md` per
-   `docs/11-TEST-PLAN.md` section 7 — a red run is never marked done there.
+`05-public-booking.spec.ts` does not additionally check that the booking is reflected in the
+admin bookings table (docs/11-TEST-PLAN.md's own version of flow 5 asks for that; the task brief
+that built these specs did not). That check turns out not to be testable without touching
+application code: `/book` has no in-app link into the admin section, and reaching `/login` any
+other way is a `page.goto()` — see the same in-memory-only reset above. See that spec's own
+header comment.
+
+## Known gaps for a follow-up
+
+- **No persistence across a full navigation.** By design (ADR-005), the demo dataset exists only
+  in the page's JS memory; any `page.goto()` regenerates a fresh (but deterministically
+  identical) one. This is why `02` uses link clicks instead of `goto()`, and why `05` cannot
+  verify a public booking against the admin bookings table. If a future flow needs that
+  guarantee, it needs either an in-app link between `/book` and the admin section, or some form
+  of cross-reload persistence — both are structural/architecture changes, not an e2e-only fix.
+- **`06`'s "submitting twice creates exactly one booking" check is a black-box proxy.** Nothing
+  in `src/` exposes the booking store to the browser's `window`, so this suite cannot assert an
+  exact row count directly; it instead dispatches two native clicks in one synchronous call and
+  checks that exactly one confirmation screen results. The actual dedup guarantee (`serialize()`
+  + `selectBookingEligibility`'s "already booked" check in `src/stores/booking.store.ts`) is a
+  store-level concern better proven by a Vitest test against the store directly, per
+  `docs/11-TEST-PLAN.md` section 3's booking-store row — if that unit test does not already cover
+  a double `createPublicBooking` call for the same session/email, it is worth adding there.

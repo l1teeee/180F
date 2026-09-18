@@ -13,8 +13,10 @@ export class SessionDetailsSheetPage {
   constructor(page: Page) {
     this.page = page;
     this.sheet = page.getByRole('dialog', { name: /session/i });
-    this.capacityText = this.sheet.getByText(/\d+\s*\/\s*\d+/);
-    this.viewBookingsButton = this.sheet.getByRole('button', { name: /view bookings/i });
+    this.capacityText = this.sheet.getByText(/\d+\s*\/\s*\d+\s*spots reserved/i);
+    // Rendered as <Button asChild><Link>...</Link></Button> (src/components/calendar/
+    // session-details-sheet.tsx), i.e. a real <a> - its ARIA role is "link", not "button".
+    this.viewBookingsButton = this.sheet.getByRole('link', { name: /view bookings/i });
     this.editClassButton = this.sheet.getByRole('button', { name: /edit class/i });
   }
 }

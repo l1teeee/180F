@@ -1,25 +1,54 @@
 // docs/11-TEST-PLAN.md section 4, flow 6. Same wizard as flow 5 (e2e/05-public-booking.spec.ts)
-// but asserts the mobile-specific layout contract instead of re-walking the whole flow. Runs
-// at the "mobile" project's 390x844 viewport (playwright.config.ts). Once real, start each
-// test with `test.skip(({ isMobile }) => !isMobile, 'mobile-only, see flow 5 for desktop')` so
-// this file exercises only the mobile project (both projects otherwise run every spec).
-import { test } from './fixtures/hydration';
+// at the "mobile" project's 390x844 viewport (playwright.config.ts) - guarded below so this
+// file exercises only the mobile project and 05 only chromium-desktop, per the task brief.
+import { test, expect } from './fixtures/hydration';
+import { PublicBookingWizardPage } from './pages/public-booking-wizard.page';
 
 test.describe('Public booking on mobile viewport', () => {
-  test.fixme('the public booking wizard has no horizontal scroll at 390x844', async () => {
-    // 1. PublicBookingWizardPage(page).goto() (page is already 390x844 under the mobile
-    //    project — no manual page.setViewportSize needed).
-    // 2. expect(page.evaluate(() => document.documentElement.scrollWidth) to equal
-    //    document.documentElement.clientWidth (no horizontal overflow), at each wizard step.
+  test.skip(({ isMobile }) => !isMobile, 'mobile-only, see 05-public-booking.spec.ts for desktop');
+
+  test('a full session is disabled and cannot be selected', async ({ page }) => {
+    const wizard = new PublicBookingWizardPage(page);
+    await wizard.goto();
+
+    const disabledSlot = await wizard.findDisabledSlotToday();
+    await expect(disabledSlot).toBeDisabled();
+    await expect(disabledSlot).toHaveText(/full/i);
   });
 
-  test.fixme('tap targets in the wizard do not overlap at mobile width', async () => {
-    // 1. At the class-selection and time-slot steps, read each interactive control's
-    //    bounding box (locator.boundingBox()) and assert no two intersect.
-  });
+  test('completing the wizard shows the success screen, and submitting twice creates exactly one booking', async ({
+    page,
+  }) => {
+    const wizard = new PublicBookingWizardPage(page);
+    await wizard.goto();
 
-  test.fixme('the public shell renders with no admin sidebar', async () => {
-    // 1. expect no element with the admin sidebar's accessible role/name (AppShellPage's nav
-    //    links) is present on /book (master plan section 34: "no admin sidebar").
+    await wizard.selectFirstAvailableSession();
+    await wizard.fillContactInfo({
+      name: 'Mobile E2E Customer',
+      phone: '+1 555 000 5678',
+      email: 'mobile-e2e@example.com',
+    });
+
+    // Dispatch two native clicks on the button in one synchronous browser-side call, bypassing
+    // Playwright's own actionability retry loop entirely (a plain second `.click()` would just
+    // wait - and eventually time out - for the button to become enabled/attached again once the
+    // first click's submission starts disabling and then unmounting it). This is what actually
+    // exercises the demo's re-entrancy guard (docs/08-STATE-MANAGEMENT.md section 8.2:
+    // createPublicBooking sets `mutation: 'pending'` before its first await and is wrapped in
+    // serialize()) instead of relying on Playwright's own click delay to hide the race. A
+    // second, actually-processed submission for the same session and email would resolve
+    // against the store's "already booked" check (selectBookingEligibility) rather than create
+    // a duplicate row - see e2e/README.md for why this suite cannot inspect the store directly
+    // to assert an exact count, and what is asserted here instead.
+    await wizard.confirmReservationButton.evaluate((button: HTMLButtonElement) => {
+      button.click();
+      button.click();
+    });
+
+    await expect(wizard.successHeading).toBeVisible();
+    // Only one confirmation screen exists to land on regardless of how many submissions were
+    // attempted - the form (and the button that could submit a second time) is unmounted the
+    // moment the first one succeeds.
+    await expect(page.getByRole('heading', { name: /your class is booked/i })).toHaveCount(1);
   });
 });

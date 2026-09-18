@@ -19,6 +19,14 @@ export default defineConfig({
     // above) — 'on-first-failure' is the closest match to the task brief's intent: a
     // screenshot the first time a test fails, not on every retry attempt.
     screenshot: 'on-first-failure',
+    // StatCard's number (src/components/shared/stat-card.tsx `AnimatedValue`) counts up from 0
+    // over ~600ms via requestAnimationFrame on every mount, including a client-side route
+    // change - a KPI read immediately after navigating can otherwise land mid-count. The
+    // component already honours `prefers-reduced-motion` itself (it jumps straight to the
+    // final value on the next frame instead of tweening), so emulating it here exercises a
+    // real, intentional code path rather than a test-only hack - see e2e/pages/stat-card.ts for
+    // the matching real-signal (double requestAnimationFrame) wait before reading a value.
+    reducedMotion: 'reduce',
   },
 
   projects: [

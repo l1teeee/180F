@@ -1,14 +1,36 @@
-// docs/11-TEST-PLAN.md section 4, flow 3. Page objects to use once filled in: e2e/pages/
-// calendar.page.ts (CalendarPage), e2e/pages/session-sheet.page.ts (SessionDetailsSheetPage).
-// Requires the auth fixture (e2e/fixtures/auth.ts).
-import { test } from './fixtures/auth';
+// docs/11-TEST-PLAN.md section 4, flow 3 (ADR-006/ADR-008: occupancy has exactly one source of
+// truth - src/domain/selectors/sessions.ts - so the session sheet's own capacity figure must
+// agree with the same session's figure on the calendar itself).
+import { test, expect } from './fixtures/auth';
+import { CalendarPage } from './pages/calendar.page';
 
 test.describe('Calendar -> Open class -> Inspect capacity', () => {
-  test.fixme('the session sheet capacity matches the class detail page capacity', async () => {
-    // 1. CalendarPage(authenticatedPage).goto(); openSession(className) to open the sheet.
-    // 2. Read the sheet's "booked / capacity" figure (SessionDetailsSheetPage.capacityText).
-    // 3. Navigate to that same session's /classes/[id]; read its occupancy figure.
-    // 4. expect the two figures to be equal (ADR-006/ADR-008: one source of truth in
-    //    src/domain/selectors/sessions.ts — assert the two screens agree, not a fixed number).
+  test('switching week, month and day views still opens a session whose sheet capacity matches its calendar figure', async ({
+    authenticatedPage,
+  }) => {
+    const calendarPage = new CalendarPage(authenticatedPage);
+    await calendarPage.goto();
+
+    await expect(calendarPage.weekViewButton).toHaveAttribute('aria-pressed', 'true'); // default view
+
+    await calendarPage.monthViewButton.click();
+    await expect(calendarPage.monthViewButton).toHaveAttribute('aria-pressed', 'true');
+
+    await calendarPage.dayViewButton.click();
+    await expect(calendarPage.dayViewButton).toHaveAttribute('aria-pressed', 'true');
+
+    await calendarPage.weekViewButton.click();
+    await expect(calendarPage.weekViewButton).toHaveAttribute('aria-pressed', 'true');
+
+    const { root: eventRoot, fraction } = await calendarPage.firstOpenEvent();
+    const sheet = await calendarPage.openEvent(eventRoot);
+
+    await expect(sheet.sheet).toBeVisible();
+    const capacityText = (await sheet.capacityText.textContent()) ?? '';
+    const match = /(\d+)\s*\/\s*(\d+)/.exec(capacityText);
+    expect(match, `Could not read a booked/capacity figure from "${capacityText}"`).not.toBeNull();
+    const sheetFraction = `${match![1]}/${match![2]}`;
+
+    expect(sheetFraction).toBe(fraction);
   });
 });

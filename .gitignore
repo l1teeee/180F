@@ -5,6 +5,7 @@ build
 coverage
 playwright-report
 test-results
+e2e/.auth
 .env*.local
 next-env.d.ts
 .DS_Store

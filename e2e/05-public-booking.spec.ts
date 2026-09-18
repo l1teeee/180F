@@ -1,34 +1,37 @@
-// docs/11-TEST-PLAN.md section 4, flow 5. Page objects to use once filled in: e2e/pages/
-// public-booking-wizard.page.ts (PublicBookingWizardPage), e2e/pages/bookings.page.ts
-// (BookingsPage, to verify the booking landed in the admin table). Runs at the desktop
-// project's default 1440x900 viewport; no admin auth needed (/book has no admin sidebar,
-// master plan section 34).
-import { test } from './fixtures/hydration';
+// docs/11-TEST-PLAN.md section 4, flow 5. Desktop-only (the mobile equivalent is flow 6,
+// e2e/06-public-booking-mobile.spec.ts) - guarded below so this file exercises only the
+// chromium-desktop project and 06 only the mobile one, per the task brief.
+//
+// Scoped to the task brief's flow 5 (class -> date -> time -> details -> confirmation) only.
+// docs/11's own flow 5 additionally asks to verify the booking "is reflected in the admin
+// bookings table afterward" - that is not testable here: /book and the admin routes share one
+// in-memory dataset only within a single unreloaded page (RootLayout mounts DemoDataProvider
+// once for the whole app), /book has no in-app link into the admin section, and Playwright's
+// page.goto() to /login is a real browser navigation that would reload the app and regenerate
+// a fresh dataset (ADR-005 "data resets on reload"), erasing the very booking being checked.
+// See the final report for this finding.
+import { test, expect } from './fixtures/hydration';
+import { PublicBookingWizardPage } from './pages/public-booking-wizard.page';
 
-test.describe('Public booking: select class -> date -> time -> customer -> confirm -> success', () => {
-  // Desktop-specific per docs/11 section 4 flow 5; the mobile equivalent is flow 6
-  // (e2e/06-public-booking-mobile.spec.ts). Once these tests are real, start each with
-  // `test.skip(({ isMobile }) => isMobile, 'desktop-only, see flow 6 for mobile')` so this
-  // file exercises only the chromium-desktop project and flow 6 only the mobile project —
-  // both projects otherwise run every spec, which would duplicate this flow.
-  test.fixme('a full time slot is disabled and cannot be selected', async () => {
-    // 1. PublicBookingWizardPage(page).goto(); pick a class whose seeded data includes a FULL
-    //    slot (master plan section 37 example: "6:00 PM   FULL").
-    // 2. expect(wizard.timeSlot('6:00 PM')).toBeDisabled().
-  });
+test.describe('Public booking: select class -> date -> time -> details -> confirmation', () => {
+  test.skip(({ isMobile }) => isMobile, 'desktop-only, see 06-public-booking-mobile.spec.ts');
 
-  test.fixme('completing the wizard shows the success screen with class, date, time, location', async () => {
-    // 1. Walk classCard -> dateOption -> timeSlot (a non-full slot) -> fillContactInfo(...).
-    // 2. confirmReservationButton.click().
-    // 3. expect(wizard.successHeading).toBeVisible() ("Your class is booked!").
-    // 4. expect the success screen to show the chosen class, date, time and studio location
-    //    (master plan section 39; the studio location comes from useSettingsStore.general per
-    //    ADR-019, not a hard-coded string in the test).
-  });
+  test('completing the wizard shows the success screen with class, date, time and location', async ({ page }) => {
+    const wizard = new PublicBookingWizardPage(page);
+    await wizard.goto();
 
-  test.fixme('the new public booking is reflected in the admin bookings table afterward', async () => {
-    // 1. Complete the wizard as above with a known customer name.
-    // 2. Sign in as admin (see e2e/fixtures/auth.ts) and open BookingsPage.
-    // 3. expect BookingsPage.rowByCustomerName(name) to be visible.
+    await wizard.selectFirstAvailableSession();
+    await wizard.fillContactInfo({
+      name: 'Desktop E2E Customer',
+      phone: '+1 555 000 1234',
+      email: 'desktop-e2e@example.com',
+    });
+    await wizard.confirmReservationButton.click();
+
+    await expect(wizard.successHeading).toBeVisible();
+    await expect(page.getByText('Class', { exact: true })).toBeVisible();
+    await expect(page.getByText('Date', { exact: true })).toBeVisible();
+    await expect(page.getByText('Time', { exact: true })).toBeVisible();
+    await expect(page.getByText('Location', { exact: true })).toBeVisible();
   });
 });

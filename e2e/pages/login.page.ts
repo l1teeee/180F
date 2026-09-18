@@ -15,12 +15,18 @@ export class LoginPage {
     this.page = page;
     this.emailInput = page.getByRole('textbox', { name: /email/i });
     this.passwordInput = page.getByLabel(/password/i);
-    this.rememberMeCheckbox = page.getByRole('checkbox', { name: /remember me/i });
+    // "Remember me" is a shadcn Switch, not a checkbox primitive (src/components/auth/
+    // login-form.tsx's own header comment explains why) - its ARIA role is "switch".
+    this.rememberMeCheckbox = page.getByRole('switch', { name: /remember me/i });
     this.signInButton = page.getByRole('button', { name: /sign in/i });
-    this.forgotPasswordLink = page.getByRole('link', { name: /forgot password/i });
+    // A plain <button type="button">, not an <a> - there is nowhere for it to link to in this
+    // demo (it only ever shows a toast), so it never got an href.
+    this.forgotPasswordLink = page.getByRole('button', { name: /forgot password/i });
     // Master plan does not specify a role for the invalid-credentials message; `alert` is the
-    // conventional accessible role for a form-level error banner.
-    this.errorMessage = page.getByRole('alert');
+    // conventional accessible role for a form-level error banner. Next.js also renders its own
+    // permanent, empty #__next-route-announcer__ with role="alert" on every page - filtering to
+    // one that actually has text excludes it.
+    this.errorMessage = page.getByRole('alert').filter({ hasText: /.+/ });
   }
 
   async goto(): Promise<void> {

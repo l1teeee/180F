@@ -45,7 +45,7 @@ No sidebar link may ever 404.
 `/docs/04-DOMAIN-MODEL.md`. Types live in `src/domain/types/`. Adding or renaming a field requires Opus approval.
 
 ## Mock data rules
-Deterministic generator seeded with 180180, keyed on `demoToday`. Names are `Customer 01` / `Instructor 01` — no real personal data. One ledger, every number derived (`/docs/05-MOCK-DATA-STRATEGY.md`). Data resets on reload; that is intended.
+Deterministic generator seeded with 180180, keyed on `demoToday`. Names are `Customer 01` / `Instructor 01` — no real personal data. One ledger, every number derived (`/docs/05-MOCK-DATA-STRATEGY.md`). Demo state persists for the browser session and syncs across tabs (ADR-022); it resets on a new day or through Reset demo data.
 
 ## Agent roles
 - **Opus 5** — architect and orchestrator. Writes `/docs/**`, `CLAUDE.md`, `.agents/tasks.md`. Never writes application code.

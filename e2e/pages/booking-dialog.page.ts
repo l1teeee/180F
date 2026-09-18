@@ -1,16 +1,30 @@
-// master plan section 24 (New Booking Flow: Customer, Class, Date, Time, Instructor fields;
-// capacity text like "12 / 15 spots reserved"; success toast "Booking created successfully").
-// Opened from BookingsPage.newBookingButton. Used by e2e/02-new-booking.spec.ts.
-import type { Locator, Page } from '@playwright/test';
+// master plan section 24 (New Booking Flow: Customer, Class, Date, Time fields; Instructor is a
+// derived, read-only fact, not a field; capacity text like "12 / 15 spots reserved"; success
+// toast "Booking created successfully"). Opened from BookingsPage.newBookingButton. Used by
+// e2e/02-new-booking.spec.ts.
+import { expect, type Locator, type Page } from '@playwright/test';
+
+// The class catalog (docs/04-DOMAIN-MODEL.md) is fixed - unlike which sessions exist on which
+// dates, the eight class TYPE names themselves never change day to day, so iterating this fixed
+// list (rather than reading the Class combobox's own options first) is safe on any day.
+const CLASS_TYPE_NAMES = [
+  'Functional Training',
+  'Cycling',
+  'Yoga',
+  'Pilates',
+  'HIIT',
+  'Strength',
+  'Mobility',
+  'Boxing',
+] as const;
 
 export class BookingDialogPage {
   readonly page: Page;
   readonly dialog: Locator;
   readonly customerSelect: Locator;
   readonly classSelect: Locator;
-  readonly dateInput: Locator;
+  readonly dateSelect: Locator;
   readonly timeSelect: Locator;
-  readonly instructorSelect: Locator;
   readonly capacityText: Locator;
   readonly submitButton: Locator;
   readonly successToast: Locator;
@@ -18,32 +32,61 @@ export class BookingDialogPage {
   constructor(page: Page) {
     this.page = page;
     this.dialog = page.getByRole('dialog', { name: /new booking/i });
-    this.customerSelect = this.dialog.getByRole('combobox', { name: /customer/i });
-    this.classSelect = this.dialog.getByRole('combobox', { name: /class/i });
-    this.dateInput = this.dialog.getByLabel(/date/i);
-    this.timeSelect = this.dialog.getByRole('combobox', { name: /time/i });
-    this.instructorSelect = this.dialog.getByRole('combobox', { name: /instructor/i });
-    this.capacityText = this.dialog.getByText(/\d+\s*\/\s*\d+\s*spots/i);
-    this.submitButton = this.dialog.getByRole('button', { name: /^(new booking|create|save)/i });
+    this.customerSelect = this.dialog.getByRole('combobox', { name: /^customer$/i });
+    this.classSelect = this.dialog.getByRole('combobox', { name: /^class$/i });
+    this.dateSelect = this.dialog.getByRole('combobox', { name: /^date$/i });
+    this.timeSelect = this.dialog.getByRole('combobox', { name: /^time$/i });
+    this.capacityText = this.dialog.getByText(/\d+\s*\/\s*\d+\s*spots reserved/i);
+    // The submit label depends on whether the chosen session is full (master plan section 24):
+    // "Reserve booking" normally, "Join waitlist" when it is - both are legitimate successes.
+    this.submitButton = this.dialog.getByRole('button', { name: /reserve booking|join waitlist/i });
     this.successToast = page.getByText(/booking created successfully/i);
   }
 
-  async fillAndSubmit(options: {
-    customer: string;
-    className: string;
-    date: string;
-    time: string;
-    instructor: string;
-  }): Promise<void> {
+  /**
+   * Picks `customerName`, then tries each class type in turn until one has a session on
+   * `dateLabel` (the app's own "MMM d, yyyy" format, e.g. `format(new Date(), 'MMM d, yyyy')`
+   * from date-fns), and selects that session's first time slot. A full slot still books onto
+   * the waitlist rather than being rejected (the dialog switches its own submit button to
+   * "Join waitlist"), and a waitlist booking still counts toward the dashboard's "today's
+   * bookings" KPI (src/domain/selectors/dashboard.ts counts every booking on the date,
+   * regardless of status) - so any session on the target date is a valid pick here, not only
+   * an available one. Returns the class type it picked.
+   */
+  async selectFirstSessionOnDate(customerName: string, dateLabel: string): Promise<string> {
     await this.customerSelect.click();
-    await this.page.getByRole('option', { name: options.customer }).click();
-    await this.classSelect.click();
-    await this.page.getByRole('option', { name: options.className }).click();
-    await this.dateInput.fill(options.date);
-    await this.timeSelect.click();
-    await this.page.getByRole('option', { name: options.time }).click();
-    await this.instructorSelect.click();
-    await this.page.getByRole('option', { name: options.instructor }).click();
-    await this.submitButton.click();
+    await this.page.getByRole('option', { name: customerName, exact: true }).click();
+
+    for (const className of CLASS_TYPE_NAMES) {
+      await this.classSelect.click();
+      await this.page.getByRole('option', { name: className, exact: true }).click();
+
+      try {
+        // Picking a class re-enables the Date combobox only once its own effect resolves the
+        // class's upcoming dates - poll for that real signal instead of a fixed sleep.
+        await expect(this.dateSelect).toBeEnabled({ timeout: 3_000 });
+      } catch {
+        continue; // this class type has no upcoming sessions scheduled at all right now
+      }
+
+      await this.dateSelect.click();
+      const dateListbox = this.page.getByRole('listbox');
+      await expect(dateListbox).toBeVisible();
+      const dateOption = dateListbox.getByRole('option', { name: dateLabel, exact: true });
+      if ((await dateOption.count()) === 0) {
+        await this.page.keyboard.press('Escape');
+        await expect(dateListbox).toBeHidden();
+        continue;
+      }
+      await dateOption.click();
+
+      await this.timeSelect.click();
+      const timeListbox = this.page.getByRole('listbox');
+      await expect(timeListbox).toBeVisible();
+      await timeListbox.getByRole('option').first().click();
+      return className;
+    }
+
+    throw new Error(`No class type has a session on ${dateLabel}; the demo dataset may have changed shape.`);
   }
 }

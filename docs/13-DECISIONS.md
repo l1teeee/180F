@@ -421,3 +421,50 @@ With `animate` set, the component stops being a single `<img>` and becomes inlin
 
 ### Consequences
 `blobatar` is added to the approved dependency list; it is the only addition since the stack was pinned in ADR-002. Avatars stay deterministic, so they are hydration-safe and identical on every machine. `Customer.avatar` and `Instructor.avatar` stay `string | null` in the domain: `null` now means "generate a blobatar from the seed" rather than "draw initials". The initials fallback remains for the case where the library fails to load, so no avatar slot is ever empty.
+
+---
+
+## ADR-022 - Demo state persists for the browser session and syncs across tabs
+
+### Context
+ADR-005 seeded the dataset on every mount and held all state in memory, so "data resets on reload". Two independent reviewers then showed that this breaks the demo's climax. Master plan section 61, steps 13 to 17, is: complete a booking on the phone, return to the admin, show the reservation reflected. A presenter who switches from `/book` to `/dashboard` through the address bar, or who shows the phone in one tab and the admin in another - the natural way to present it - loses the booking, because a full navigation regenerates the dataset and every tab holds its own ledger. Master plan section 24 also asks that data "persist for the browser session", which the original decision read too narrowly.
+
+### Alternatives considered
+1. Keep in-memory state and tell presenters to navigate only through in-app links. Fragile; one keystroke in the address bar ruins the demo in front of a client.
+2. Zustand `persist` middleware on each store. Scatters the snapshot across ten keys that can fall out of step with each other.
+3. One versioned snapshot of all mutable demo state, written after every mutation, restored on hydration, and broadcast to other tabs.
+
+### Chosen solution
+Option 3.
+
+- **One key**, `180f.demo.v1.<demoToday>`, in `localStorage`. Keyed by date because the dataset is anchored to `demoToday`: yesterday's ledger would sit on a schedule that no longer exists, so a new day starts clean.
+- **What is saved:** every slice a user can change - bookings, customers, sessions, membership plans, automations, notifications and settings. Class types and instructors are static and are always regenerated.
+- **When:** after each committed mutation, debounced to about 250 ms so a burst of changes writes once.
+- **Restore:** `hydrateDemo` reads the snapshot for today inside its client effect, which keeps ADR-005's hydration safety intact, and falls back to the seed when none exists or when it fails validation. A corrupt or foreign snapshot is discarded, never trusted.
+- **Across tabs:** each tab listens for the `storage` event on that key and rehydrates from the new snapshot, so a booking made on the phone tab appears in the admin tab within a moment, without a reload.
+- **Reset:** a "Reset demo data" action, reachable from the Demo Mode badge and from Settings, deletes the key and re-seeds. It is the first step of the presenter's pre-flight in docs/15.
+
+### Reason
+It makes the one sequence the whole demo builds toward reliable under the way people actually present, at the cost of one small module.
+
+### Consequences
+- The serialized mutation queue of ADR-017 guarantees capacity **within a tab**. Two tabs committing the last seat in the same instant resolve last-writer-wins on the snapshot. For a single presenter that cannot happen in practice; it is recorded here rather than solved with cross-tab locking nobody needs.
+- The snapshot is about 285 KB, well inside browser storage limits.
+- "Data resets on reload" is removed from CLAUDE.md and docs/05. Data now resets on a new day or on an explicit reset.
+
+---
+
+## ADR-023 - One definition of "today's bookings", shared by every screen
+
+### Context
+Codex ran the seed and found the dashboard disagreeing with itself: the Today's bookings KPI read 86 while the weekly chart's bar for today read 84, and cancelling a booking moved the chart to 83 but left the KPI at 86. Two surfaces were counting "bookings today" with two definitions - one including cancelled and waitlisted records, one not. That is precisely the failure CLAUDE.md lists as grounds for rejecting work.
+
+### Chosen solution
+**A booking counts toward a day when its session is on that day and its status is `confirmed` or `pending`** - the same rule that decides whether it occupies a spot (ADR-008). Cancelled and waitlisted bookings never count.
+
+- The KPI, the weekly chart, and the vs-yesterday delta all read one selector with this definition. No surface computes its own.
+- The bookings table stays a ledger: its All tab shows every status, as a ledger should. Its Confirmed plus Pending tabs, filtered to today, sum to exactly the KPI.
+- The KPI's supporting line says so in plain words, so the difference from the All tab is explained on screen rather than discovered by a client.
+
+### Consequences
+Cancelling a booking for today now lowers the KPI and the chart together, by one, immediately. The Playwright flow that asserts the KPI moves by exactly one on creation gains the symmetric cancellation assertion.

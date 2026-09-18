@@ -1,25 +1,37 @@
-// docs/11-TEST-PLAN.md section 4, flow 1. Phase 10 fills this in once /login and /dashboard
-// exist; today it is a placeholder naming exactly what will be asserted (task brief step 7).
-// Page objects to use once filled in: e2e/pages/login.page.ts (LoginPage), e2e/pages/
-// dashboard.page.ts (DashboardPage). Credentials: e2e/fixtures/auth.ts.
-import { test } from './fixtures/hydration';
+// docs/11-TEST-PLAN.md section 4, flow 1.
+import { test, expect } from './fixtures/hydration';
+import { DEMO_ADMIN_EMAIL, DEMO_ADMIN_PASSWORD } from './fixtures/auth';
+import { LoginPage } from './pages/login.page';
+import { DashboardPage, DASHBOARD_KPI_LABELS } from './pages/dashboard.page';
 
 test.describe('Demo login -> Dashboard', () => {
-  test.fixme('signing in with demo credentials redirects to /dashboard', async () => {
-    // 1. LoginPage(page).goto(); signIn(DEMO_ADMIN_EMAIL, DEMO_ADMIN_PASSWORD).
-    // 2. expect(page).toHaveURL(/\/dashboard$/).
+  test('signing in with demo credentials redirects to /dashboard and every KPI renders a real number', async ({
+    page,
+  }) => {
+    const loginPage = new LoginPage(page);
+    await loginPage.goto();
+    await loginPage.signIn(DEMO_ADMIN_EMAIL, DEMO_ADMIN_PASSWORD);
+
+    await expect(page).toHaveURL(/\/dashboard$/);
+
+    const dashboardPage = new DashboardPage(page);
+    await expect(dashboardPage.heading).toBeVisible();
+
+    // statCardValue throws if the card's text is not a real number (e.g. a leftover "--" or
+    // "Loading" placeholder), so a passing read here already proves it is not a skeleton.
+    for (const label of DASHBOARD_KPI_LABELS) {
+      const value = await dashboardPage.kpiValue(label);
+      expect(value, `${label} should be a non-negative number`).toBeGreaterThanOrEqual(0);
+    }
   });
 
-  test.fixme('the four KPI cards render non-placeholder values', async () => {
-    // 1. Sign in, land on DashboardPage.
-    // 2. For each of "Active members", "Today bookings", "Occupancy", "Today's classes":
-    //    expect the KPI card's value text to be non-empty and not a literal placeholder like
-    //    "--" or "Loading" (waitForDemoReady already guarantees the data has been seeded).
-  });
+  test('wrong credentials stay on /login with a visible error', async ({ page }) => {
+    const loginPage = new LoginPage(page);
+    await loginPage.goto();
+    await loginPage.signIn('wrong@demo.com', 'wrong-password');
 
-  test.fixme('wrong credentials stay on /login with a visible error', async () => {
-    // 1. LoginPage(page).goto(); signIn('wrong@demo.com', 'wrong-password').
-    // 2. expect(page).toHaveURL(/\/login$/).
-    // 3. expect(loginPage.errorMessage).toBeVisible().
+    await expect(page).toHaveURL(/\/login$/);
+    await expect(loginPage.errorMessage).toBeVisible();
+    await expect(loginPage.errorMessage).toContainText(/invalid/i);
   });
 });

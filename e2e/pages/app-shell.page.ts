@@ -1,6 +1,10 @@
 // docs/CLAUDE.md "Routes" and master plan section 15 (App Shell / Sidebar). One row per sidebar
-// nav item; `ADMIN_ROUTES` is also what e2e/07-admin-nav-smoke.spec.ts iterates over, so the
-// name here must match the link's accessible name exactly once the sidebar exists.
+// nav item; `ADMIN_ROUTES` is also what e2e/07-admin-nav-smoke.spec.ts iterates over.
+//
+// The sidebar's own "New booking" button (src/components/layout/app-sidebar.tsx) is a
+// documented no-op (`function handleNewBooking() {}` there) - it is deliberately not exposed
+// here, so a spec cannot accidentally rely on it. Each admin page's own "New booking" affordance
+// (e.g. BookingsPage.newBookingButton) is the wired one.
 import type { Locator, Page } from '@playwright/test';
 
 export const ADMIN_ROUTES: ReadonlyArray<{ name: string; path: string }> = [
@@ -25,17 +29,21 @@ export class AppShellPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.globalSearchInput = page.getByRole('searchbox', { name: /search customers, classes/i });
+    this.globalSearchInput = page.getByRole('textbox', { name: /search customers, classes/i });
     this.notificationsButton = page.getByRole('button', { name: /notifications/i });
-    this.helpButton = page.getByRole('button', { name: /help/i });
-    this.profileMenuButton = page.getByRole('button', { name: /administrator|profile/i });
-    this.logoutButton = page.getByRole('button', { name: /log ?out/i });
+    this.helpButton = page.getByRole('button', { name: /^help$/i });
+    // Two "Account menu" buttons exist (one on the rail, one in the top bar) - scope to the
+    // banner landmark to pick the top bar's one unambiguously.
+    this.profileMenuButton = page.getByRole('banner').getByRole('button', { name: /account menu/i });
+    this.logoutButton = page.getByRole('menuitem', { name: /log ?out/i });
   }
 
   navLink(name: string): Locator {
     return this.page.getByRole('link', { name, exact: true });
   }
 
+  /** Client-side navigation via the real sidebar link - never page.goto(), which would force a
+   * full reload and silently reset the in-memory demo dataset (ADR-005). */
   async goTo(name: string): Promise<void> {
     await this.navLink(name).click();
   }

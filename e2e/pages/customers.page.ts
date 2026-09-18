@@ -11,8 +11,8 @@ export class CustomersPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.searchInput = page.getByRole('searchbox');
-    this.table = page.getByRole('table', { name: /customers/i });
+    this.searchInput = page.getByRole('textbox', { name: /search customers/i });
+    this.table = page.getByRole('table');
   }
 
   async goto(): Promise<void> {
@@ -23,6 +23,8 @@ export class CustomersPage {
     return this.table.getByRole('row', { name: new RegExp(name) });
   }
 
+  /** CustomersTable navigates via router.push (Next.js client-side), so this never reloads
+   * the page or resets the in-memory demo dataset. */
   async openCustomer(name: string): Promise<CustomerDetailPage> {
     await this.rowByName(name).click();
     return new CustomerDetailPage(this.page);
