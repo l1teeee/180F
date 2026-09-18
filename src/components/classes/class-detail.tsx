@@ -7,8 +7,7 @@ import { AvatarGroup } from '@/components/shared/avatar-group';
 import { Card } from '@/components/ui/card';
 import type { ClassTypeWithStats, Instructor } from '@/domain/types';
 import { CLASS_CATEGORY_LABEL } from '@/domain/constants';
-import { ACCENT_ICON_BG_CLASS } from './class-accent';
-import { ClassIcon } from './class-icon';
+import { ACCENT_ICON_BG_CLASS, ClassIcon } from '@/components/shared/class-icon';
 
 export interface ClassDetailProps {
   classType: ClassTypeWithStats;

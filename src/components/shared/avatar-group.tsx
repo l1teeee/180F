@@ -25,23 +25,25 @@ import {
   AvatarGroupCount,
   AvatarImage,
 } from '@/components/ui/avatar';
+import { ACCENT_FALLBACK_CLASSNAME } from './accent-fallback-class';
 
 export interface AvatarGroupProps {
-  people: { id: string; name: string; avatar: string | null }[];
+  people: {
+    id: string;
+    name: string;
+    avatar: string | null;
+    /**
+     * Overrides the id-derived accent below - docs/03-DESIGN-SYSTEM.md section 13 "Tint": an
+     * instructor's blobatar takes their primary class type's accent instead of the deterministic
+     * per-id one. Optional and additive, so every existing `{ id, name, avatar }` caller keeps
+     * working unchanged; a caller that knows a person's real accent (e.g. an instructor's class
+     * type) passes it here instead of accepting the id-based approximation.
+     */
+    accent?: AccentToken;
+  }[];
   max?: number; // default 4, rest collapse into "+N"
   size?: 24 | 32 | 40;
 }
-
-// Fallback-only: the accent's soft token as a Tailwind class, for the initials chip shown if
-// blobatar generation fails (docs/03 section 13 "Fallback"). Same local-map convention as
-// src/components/shared/occupancy-bar.tsx and stat-card.tsx use for their own accent classes.
-const ACCENT_FALLBACK_CLASSNAME: Record<AccentToken, string> = {
-  purple: 'bg-purple-xsoft',
-  yellow: 'bg-yellow-soft',
-  green: 'bg-green-soft',
-  pink: 'bg-pink-soft',
-  blue: 'bg-blue-soft',
-};
 
 // Every seeded person in this demo is named "Customer NN" / "Instructor NN" (privacy rule,
 // docs/04 section 2), so the trailing number - not first+last letters - is the meaningful
@@ -77,7 +79,7 @@ export function AvatarGroup({ people, max = 4, size = 32 }: AvatarGroupProps) {
           );
         }
 
-        const accent = accentForCustomerId(person.id);
+        const accent = person.accent ?? accentForCustomerId(person.id);
         return (
           <AvatarBlobatar
             key={person.id}

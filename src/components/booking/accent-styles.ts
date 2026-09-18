@@ -3,16 +3,8 @@ import type { VariantProps } from "class-variance-authority"
 import type { badgeVariants } from "@/components/ui/badge"
 import type { AccentToken } from "@/domain/types"
 
-// Literal per-accent Tailwind classes. Tailwind's compiler only keeps class names that appear
-// verbatim in source, so this cannot be templated as `bg-${accent}-soft` (docs/03-DESIGN-
-// SYSTEM.md section 9's utility-generation note applies the same way on the consuming side).
-export const ACCENT_SOFT_BG_CLASS: Record<AccentToken, string> = {
-  purple: "bg-purple-soft",
-  yellow: "bg-yellow-soft",
-  green: "bg-green-soft",
-  pink: "bg-pink-soft",
-  blue: "bg-blue-soft",
-}
+// The class-icon-chip accent map that used to live here (ACCENT_SOFT_BG_CLASS) is hoisted to
+// src/components/shared/class-icon.tsx as ACCENT_ICON_BG_CLASS, alongside ClassIcon itself.
 
 type BadgeVariant = NonNullable<VariantProps<typeof badgeVariants>["variant"]>
 

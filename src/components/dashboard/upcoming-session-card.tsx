@@ -1,43 +1,19 @@
 // docs/07-COMPONENT-ARCHITECTURE.md section 3 "UpcomingSessionCard": time, class, instructor,
 // spots, status, avatar, mini occupancy indicator (master plan section 20).
 //
-// Renders the instructor avatar directly through AvatarBlobatar (components/ui/avatar.tsx)
-// instead of the shared AvatarGroup: AvatarGroup's {id, name, avatar} contract has no accent
-// override, so it always resolves an id-based customer-style accent (see that file's own
-// comments) - it cannot express docs/03-DESIGN-SYSTEM.md section 13's rule that an instructor's
-// avatar takes their class type's accent. This session already carries that exact classType, so
-// this file builds the single-avatar variation locally per docs/12-AGENT-OWNERSHIP.md's
-// feature-wave rule: never edit a shared component, compose or build the variation and report
-// the gap (reported in the phase 3 handoff).
-import { AvatarBlobatar } from '@/components/ui/avatar';
+// Renders the instructor avatar through the shared AvatarGroup (components/shared/avatar-group)
+// with a single person, passing its optional per-person `accent` override so it takes the
+// session's class-type accent (docs/03-DESIGN-SYSTEM.md section 13 "Tint") instead of
+// AvatarGroup's default id-derived approximation.
+import { AvatarGroup } from '@/components/shared/avatar-group';
 import { OccupancyBar } from '@/components/shared/occupancy-bar';
 import { StatusBadge } from '@/components/shared/status-badge';
-import type { AccentToken, SessionCard } from '@/domain/types';
+import type { SessionCard } from '@/domain/types';
 import { formatDisplayTime, formatWeekdayShort } from '@/lib/dates';
-import { paletteForAccent } from '@/lib/avatar';
 
 export interface UpcomingSessionCardProps {
   session: SessionCard;
 }
-
-// Every seeded instructor is named "Instructor NN" (privacy rule, docs/04 section 2) - same
-// trailing-number convention src/components/shared/avatar-group.tsx's initialsFor uses.
-function initialsFor(name: string): string {
-  const trailingNumber = /(\d{1,2})\s*$/.exec(name.trim());
-  if (trailingNumber) return trailingNumber[1].padStart(2, '0');
-  const words = name.trim().split(/\s+/).filter(Boolean);
-  if (words.length === 0) return '?';
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
-  return (words[0][0] + words[1][0]).toUpperCase();
-}
-
-const ACCENT_FALLBACK_CLASSNAME: Record<AccentToken, string> = {
-  purple: 'bg-purple-xsoft',
-  yellow: 'bg-yellow-soft',
-  green: 'bg-green-soft',
-  pink: 'bg-pink-soft',
-  blue: 'bg-blue-soft',
-};
 
 export function UpcomingSessionCard({ session }: UpcomingSessionCardProps) {
   const { instructor, classType } = session;
@@ -57,13 +33,9 @@ export function UpcomingSessionCard({ session }: UpcomingSessionCardProps) {
       </div>
 
       <div className="flex items-center gap-3">
-        <AvatarBlobatar
-          seed={instructor.id}
-          palette={paletteForAccent(classType.accent)}
+        <AvatarGroup
+          people={[{ id: instructor.id, name: instructor.name, avatar: instructor.avatar, accent: classType.accent }]}
           size={40}
-          alt={instructor.name}
-          fallbackInitials={initialsFor(instructor.name)}
-          fallbackClassName={ACCENT_FALLBACK_CLASSNAME[classType.accent]}
         />
         <div className="flex min-w-0 flex-col">
           <span className="truncate text-[15px] font-semibold text-ink">{classType.name}</span>

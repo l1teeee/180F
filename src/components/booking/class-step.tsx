@@ -6,8 +6,7 @@ import { Check } from "lucide-react"
 import { cn } from "@/lib/cn"
 import type { ClassType } from "@/domain/types"
 import type { PublicClassOption } from "@/hooks/use-public-booking-catalog"
-import { ACCENT_SOFT_BG_CLASS } from "./accent-styles"
-import { ClassIcon } from "./class-icon"
+import { ACCENT_ICON_BG_CLASS, ClassIcon } from "@/components/shared/class-icon"
 
 // Master plan section 35: card content is icon, duration, short description, available
 // sessions - one native <button> per card (not a div+onClick) so the whole 40px+ target is
@@ -52,8 +51,8 @@ export function ClassStep({
             >
               <div
                 className={cn(
-                  "flex size-10 shrink-0 items-center justify-center rounded-chip text-ink",
-                  ACCENT_SOFT_BG_CLASS[option.classType.accent],
+                  "flex size-10 shrink-0 items-center justify-center rounded-chip",
+                  ACCENT_ICON_BG_CLASS[option.classType.accent],
                 )}
               >
                 <ClassIcon name={option.classType.icon} className="size-5" />

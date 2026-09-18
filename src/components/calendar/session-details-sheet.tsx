@@ -56,12 +56,7 @@ export function SessionDetailsSheet({ sessionId, onOpenChange }: SessionDetailsS
 
               <div className="flex flex-col gap-2.5 rounded-card-sm border border-border-soft bg-canvas-wash p-3.5">
                 <div className="flex items-center gap-3">
-                  {/* OccupancyBar's own root div takes no className (src/components/shared/
-                      occupancy-bar.tsx), so it needs a sized flex-1 wrapper here to hand its
-                      internal flex-1 track span a real width to fill, not a 0px one. */}
-                  <div className="flex-1">
-                    <OccupancyBar rate={card.occupancyRate} accent={card.classType.accent} showPercentage={false} />
-                  </div>
+                  <OccupancyBar rate={card.occupancyRate} accent={card.classType.accent} showPercentage={false} />
                   <span className="shrink-0 text-sm font-semibold text-ink tabular-nums">
                     {card.booked} / {card.capacity} spots reserved
                   </span>

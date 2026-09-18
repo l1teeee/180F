@@ -8,10 +8,9 @@
 import Link from 'next/link';
 import type { CSSProperties } from 'react';
 import { AvatarGroup } from '@/components/shared/avatar-group';
+import { ACCENT_ICON_BG_CLASS, ClassIcon } from '@/components/shared/class-icon';
 import { OccupancyBar } from '@/components/shared/occupancy-bar';
 import type { ClassTypeWithStats, Instructor } from '@/domain/types';
-import { ACCENT_ICON_BG_CLASS } from './class-accent';
-import { ClassIcon } from './class-icon';
 
 export interface ClassCardProps {
   classType: ClassTypeWithStats;
@@ -52,7 +51,12 @@ export function ClassCard({ classType, instructors, index = 0 }: ClassCardProps)
         <span className="text-xs font-semibold text-text-secondary">Instructors</span>
         {instructors.length > 0 ? (
           <AvatarGroup
-            people={instructors.map((instructor) => ({ id: instructor.id, name: instructor.name, avatar: instructor.avatar }))}
+            people={instructors.map((instructor) => ({
+              id: instructor.id,
+              name: instructor.name,
+              avatar: instructor.avatar,
+              accent: classType.accent,
+            }))}
             size={24}
             max={3}
           />

@@ -4,12 +4,12 @@
 // a list.
 import { Star } from 'lucide-react';
 import { AvatarBlobatar } from '@/components/ui/avatar';
+import { ACCENT_FALLBACK_CLASSNAME } from '@/components/shared/accent-fallback-class';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Card } from '@/components/ui/card';
 import type { AccentToken, InstructorWithStats } from '@/domain/types';
 import { paletteForAccent } from '@/lib/avatar';
 import { initialsFor } from './avatar-initials';
-import { ACCENT_FALLBACK_BG_CLASS } from './instructor-accent';
 
 export interface InstructorProfileCardProps {
   instructor: InstructorWithStats;
@@ -26,7 +26,7 @@ export function InstructorProfileCard({ instructor, accent }: InstructorProfileC
         animate="hover"
         alt={instructor.name}
         fallbackInitials={initialsFor(instructor.name)}
-        fallbackClassName={ACCENT_FALLBACK_BG_CLASS[accent]}
+        fallbackClassName={ACCENT_FALLBACK_CLASSNAME[accent]}
       />
       <div className="flex flex-col items-center gap-1 sm:items-start">
         <h1 className="text-[22px] font-bold tracking-tight text-ink">{instructor.name}</h1>

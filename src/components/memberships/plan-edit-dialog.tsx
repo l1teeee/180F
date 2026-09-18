@@ -93,18 +93,7 @@ export function PlanEditDialog({ plan, open, onOpenChange }: PlanEditDialogProps
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* position="top" is a deliberate workaround, not the pattern-A default: src/components/
-          ui/dialog.tsx's position="center" combines "-translate-y-1/2" (centering) with
-          "data-[state=open]:translate-y-0" (entrance settle) on the same --tw-translate-y
-          property, so the open state's translate-y-0 silently zeroes the centering offset -
-          confirmed via computed style (transform: none, --tw-translate-y: 0px instead of -50%).
-          That traps this dialog's footer off-screen on any viewport shorter than roughly twice
-          its content height, with no page scroll available to reach it (background scroll is
-          locked while a dialog is open, docs/03 section 11.6). ui/dialog.tsx is outside this
-          task's write set, so this is reported for a central fix rather than edited here;
-          position="top" (already a supported value on the same primitive) sidesteps the
-          conflict entirely, since its own translate-y-0 has no competing offset to cancel. */}
-      <DialogContent size="md" position="top">
+      <DialogContent size="md">
         <DialogHeader className="flex-none">
           <DialogTitle>Edit {plan.name}</DialogTitle>
           <DialogDescription>Changes apply immediately across the demo. No payment or billing is processed.</DialogDescription>

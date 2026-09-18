@@ -9,6 +9,7 @@ import { LogOut } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import type { NavItem } from '@/domain/constants';
 import { useAuth } from '@/services/auth/auth-context';
+import { useSettingsStore } from '@/stores/settings.store';
 import { NavLinks } from './nav-links';
 
 export interface MobileNavProps {
@@ -17,9 +18,15 @@ export interface MobileNavProps {
   onOpenChange: (open: boolean) => void;
 }
 
+// ADR-019: useSettingsStore.general.studioName is the single owner of studio identity - this is
+// only the pre-hydration/no-settings-yet fallback (matches src/data/organization.ts's own
+// default), same convention as src/hooks/use-automations-preview.ts's own local fallback.
+const FALLBACK_STUDIO_NAME = '180 Fitness Studio';
+
 export function MobileNav({ items, open, onOpenChange }: MobileNavProps) {
   const { signOut } = useAuth();
   const router = useRouter();
+  const studioName = useSettingsStore((state) => state.settings?.general.studioName ?? FALLBACK_STUDIO_NAME);
 
   async function handleLogout() {
     onOpenChange(false);
@@ -35,7 +42,7 @@ export function MobileNav({ items, open, onOpenChange }: MobileNavProps) {
             <span aria-hidden="true" className="flex h-8 w-8 items-center justify-center rounded-chip bg-ink text-xs font-bold text-white">
               180
             </span>
-            180 Fitness
+            {studioName}
           </SheetTitle>
         </SheetHeader>
 

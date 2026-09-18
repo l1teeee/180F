@@ -4,8 +4,7 @@
 // "Phase 6 - classes and instructors" is one agent, one wave), so this one cross-feature import
 // carries no concurrent-agent risk the way importing from booking/ or shared/ would.
 import { TriangleAlert } from 'lucide-react';
-import { ACCENT_ICON_BG_CLASS } from '@/components/classes/class-accent';
-import { ClassIcon } from '@/components/classes/class-icon';
+import { ACCENT_ICON_BG_CLASS, ClassIcon } from '@/components/shared/class-icon';
 import { StatusBadge } from '@/components/shared/status-badge';
 import type { SessionCard } from '@/domain/types';
 import { formatDisplayDateShort, formatDisplayTime } from '@/lib/dates';

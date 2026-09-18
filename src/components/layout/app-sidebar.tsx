@@ -15,6 +15,7 @@ import type { NavItem } from '@/domain/constants';
 import { useAuth } from '@/services/auth/auth-context';
 import { ADMIN_ACCENT, ADMIN_SEED, paletteForAccent } from '@/lib/avatar';
 import { AvatarBlobatar } from '@/components/ui/avatar';
+import { useSettingsStore } from '@/stores/settings.store';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,6 +36,11 @@ export interface AppSidebarProps {
 const EXPANDED_WIDTH = 240;
 const COLLAPSED_WIDTH = 64;
 
+// ADR-019: useSettingsStore.general.studioName is the single owner of studio identity - this is
+// only the pre-hydration/no-settings-yet fallback (matches src/data/organization.ts's own
+// default), same convention as src/hooks/use-automations-preview.ts's own local fallback.
+const FALLBACK_STUDIO_NAME = '180 Fitness Studio';
+
 // docs/03 section 15.3 "Rail on the frame" overrides section 14.1's own colour table (written
 // for the rail sitting on plain --color-surface) now that the rail sits on the dark
 // --color-shell frame instead: ink-on-white would be nearly invisible on aubergine. This is the
@@ -53,6 +59,7 @@ export function AppSidebar({ items }: AppSidebarProps) {
   const pathname = usePathname();
   const collapsed = useUiStore((state) => state.sidebarCollapsed);
   const setSidebarCollapsed = useUiStore((state) => state.setSidebarCollapsed);
+  const studioName = useSettingsStore((state) => state.settings?.general.studioName ?? FALLBACK_STUDIO_NAME);
 
   // docs/03 section 14.4: the persisted preference is read once, in an effect after mount, never
   // during render - the store's own initial value (`false`) is what both the server and the
@@ -134,7 +141,7 @@ export function AppSidebar({ items }: AppSidebarProps) {
           180
         </span>
         <RailLabel collapsed={collapsed} className={cn('text-[15px] font-bold text-white', collapsed && 'w-0')}>
-          180 Fitness
+          {studioName}
         </RailLabel>
       </div>
 

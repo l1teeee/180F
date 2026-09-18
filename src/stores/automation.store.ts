@@ -6,7 +6,8 @@ import type { Automation, AutomationStatus } from '@/domain/types';
 
 // A fixed UI-feedback delay, not a data-latency simulation (src/services/repositories/latency.ts
 // is a different concern - see that file's own comment) - a constant is already deterministic.
-const TEST_MESSAGE_DELAY_MS = 600;
+// Master plan section 33 / docs/06 specify ~800ms.
+const TEST_MESSAGE_DELAY_MS = 800;
 
 interface AutomationState {
   automations: Automation[];

@@ -11,8 +11,7 @@ import { cn } from "@/lib/cn"
 import type { PublicBookingInputSchema } from "@/domain/schemas"
 import type { ClassType, SessionWithOccupancy } from "@/domain/types"
 import { formatDisplayDate, formatDisplayTime } from "@/lib/dates"
-import { ACCENT_SOFT_BG_CLASS } from "./accent-styles"
-import { ClassIcon } from "./class-icon"
+import { ACCENT_ICON_BG_CLASS, ClassIcon } from "@/components/shared/class-icon"
 
 // Master plan section 38: fields Name, Phone, Email, in that order, validated by the existing
 // publicBookingInputSchema (React Hook Form + Zod - "Allow realistic demo input"). `noValidate`
@@ -70,8 +69,8 @@ export function CustomerStep({
       <Card size="sm" className="flex-row items-center gap-3">
         <div
           className={cn(
-            "flex size-10 shrink-0 items-center justify-center rounded-chip text-ink",
-            ACCENT_SOFT_BG_CLASS[classType.accent],
+            "flex size-10 shrink-0 items-center justify-center rounded-chip",
+            ACCENT_ICON_BG_CLASS[classType.accent],
           )}
         >
           <ClassIcon name={classType.icon} className="size-5" />

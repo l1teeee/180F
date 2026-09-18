@@ -8,7 +8,7 @@
 // chrome, and no hex literal here ever reaches a shared file.
 import { useEffect } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Controller, useForm } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { toast } from 'sonner';
 import { brandingSettingsSchema } from '@/domain/schemas';
 import type { StudioSettings } from '@/domain/types';
@@ -30,7 +30,6 @@ export function BrandingSection({ branding, onSave }: BrandingSectionProps) {
     handleSubmit,
     control,
     reset,
-    watch,
     formState: { errors, isSubmitting },
   } = useForm<BrandingValues>({
     resolver: zodResolver(brandingSettingsSchema),
@@ -46,8 +45,11 @@ export function BrandingSection({ branding, onSave }: BrandingSectionProps) {
     toast.success('Branding settings saved.');
   }
 
-  const primaryColor = watch('primaryColor');
-  const accentColor = watch('accentColor');
+  // useWatch (not useForm's own watch()) so React Compiler can memoise this component - watch()
+  // is a plain subscription callback the compiler cannot see into (react-hooks/incompatible-
+  // library), while useWatch is a proper hook it can analyse.
+  const primaryColor = useWatch({ control, name: 'primaryColor' });
+  const accentColor = useWatch({ control, name: 'accentColor' });
 
   return (
     <SectionCard title="Branding">

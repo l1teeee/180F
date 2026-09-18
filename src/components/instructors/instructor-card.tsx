@@ -8,11 +8,11 @@ import Link from 'next/link';
 import type { CSSProperties } from 'react';
 import { Star } from 'lucide-react';
 import { AvatarBlobatar } from '@/components/ui/avatar';
+import { ACCENT_FALLBACK_CLASSNAME } from '@/components/shared/accent-fallback-class';
 import { StatusBadge } from '@/components/shared/status-badge';
 import type { InstructorRosterEntry } from '@/hooks/use-instructors-roster';
 import { paletteForAccent } from '@/lib/avatar';
 import { initialsFor } from './avatar-initials';
-import { ACCENT_FALLBACK_BG_CLASS } from './instructor-accent';
 
 export interface InstructorCardProps {
   instructor: InstructorRosterEntry;
@@ -35,7 +35,7 @@ export function InstructorCard({ instructor, index = 0 }: InstructorCardProps) {
           size={40}
           alt={instructor.name}
           fallbackInitials={initialsFor(instructor.name)}
-          fallbackClassName={ACCENT_FALLBACK_BG_CLASS[instructor.accent]}
+          fallbackClassName={ACCENT_FALLBACK_CLASSNAME[instructor.accent]}
         />
         <div className="flex min-w-0 flex-col">
           <span className="truncate text-[15px] font-semibold text-ink">{instructor.name}</span>

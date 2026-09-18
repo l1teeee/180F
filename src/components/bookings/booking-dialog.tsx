@@ -112,16 +112,7 @@ export function BookingDialog({ open, onOpenChange }: BookingDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      {/* position="top" (not the "center" default): src/components/ui/dialog.tsx's centered
-          position combines "-translate-y-1/2" (centering) with
-          "data-[state=open]:translate-y-0" (entrance animation) on the same Y transform - the
-          higher-specificity data-state variant wins while open, so the dialog never actually
-          gets re-centered and instead renders from the vertical midpoint downward. Harmless for
-          a short confirm, but this form's five fields plus the capacity strip is tall enough
-          that its footer/submit button rendered entirely below the viewport. Reported for a fix
-          in that shared primitive (outside this task's write set); "top" sidesteps it because
-          that position never combines with a competing translate-y-1/2 in the first place. */}
-      <DialogContent size="md" position="top">
+      <DialogContent size="md">
         <DialogHeader>
           <DialogTitle>New booking</DialogTitle>
           <DialogDescription>Reserve a spot for a customer in an upcoming class.</DialogDescription>
@@ -240,12 +231,7 @@ export function BookingDialog({ open, onOpenChange }: BookingDialogProps) {
             {selectedSession && selectedClassType ? (
               <div className="flex flex-col gap-2.5 rounded-card-sm border border-border-soft bg-canvas-wash p-3.5">
                 <div className="flex items-center gap-3">
-                  {/* OccupancyBar's own root div takes no className (src/components/shared/
-                      occupancy-bar.tsx), so it needs a sized flex-1 wrapper here to hand its
-                      internal flex-1 track span a real width to fill, not a 0px one. */}
-                  <div className="flex-1">
-                    <OccupancyBar rate={selectedSession.occupancyRate} accent={selectedClassType.accent} showPercentage={false} />
-                  </div>
+                  <OccupancyBar rate={selectedSession.occupancyRate} accent={selectedClassType.accent} showPercentage={false} />
                   <span className="shrink-0 text-sm font-semibold text-ink tabular-nums">
                     {selectedSession.booked} / {selectedSession.capacity} spots reserved
                   </span>
